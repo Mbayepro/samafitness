@@ -181,7 +181,7 @@ export default function Home() {
             Nos services
           </p>
           <h2 className="mt-4 text-4xl font-black uppercase md:text-6xl">
-            Tout ce qu'il vous faut
+            Tout ce qu&apos;il vous faut
           </h2>
           <p className="mt-6 text-white/50">
             Un environnement complet pour votre entraînement, votre progression
