@@ -1,0 +1,17 @@
+[
+  {
+    "email": "sambafitnessadmin@gmail.com",
+    "role": "super_admin",
+    "created_at": "2026-10-20T14:01:48.286Z"
+  },
+  {
+    "email": "gerant@sambafitness.sn",
+    "role": "receptionist",
+    "created_at": "2026-10-20T14:01:48.286Z"
+  },
+  {
+    "email": "nouveau@sambafitness.sn",
+    "role": "receptionist",
+    "created_at": "2026-10-20T14:01:48.304Z"
+  }
+]

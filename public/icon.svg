@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#141414"/>
+      <stop offset="100%" stop-color="#080808"/>
+    </linearGradient>
+    <linearGradient id="lime-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#bef264"/>
+      <stop offset="50%" stop-color="#a3e635"/>
+      <stop offset="100%" stop-color="#65a30d"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background rounded card -->
+  <rect width="512" height="512" rx="112" fill="url(#bg-grad)"/>
+  <rect width="504" height="504" x="4" y="4" rx="108" fill="none" stroke="#262626" stroke-width="4"/>
+
+  <!-- Subtle lime glow border -->
+  <rect width="504" height="504" x="4" y="4" rx="108" fill="none" stroke="url(#lime-grad)" stroke-width="2" opacity="0.4"/>
+
+  <!-- Glowing background aura -->
+  <circle cx="256" cy="230" r="140" fill="#a3e635" opacity="0.08" filter="url(#glow)"/>
+
+  <!-- Athletic Dumbbell & Energy Graphic -->
+  <g transform="translate(256, 210)">
+    <!-- Central Bar -->
+    <rect x="-100" y="-12" width="200" height="24" rx="8" fill="#e5e5e5"/>
+    <rect x="-100" y="-12" width="200" height="24" rx="8" fill="url(#lime-grad)" opacity="0.3"/>
+
+    <!-- Left weight plates -->
+    <rect x="-130" y="-60" width="24" height="120" rx="8" fill="url(#lime-grad)" filter="url(#glow)"/>
+    <rect x="-155" y="-45" width="20" height="90" rx="6" fill="#e5e5e5"/>
+    <rect x="-175" y="-30" width="16" height="60" rx="5" fill="#a3a3a3"/>
+
+    <!-- Right weight plates -->
+    <rect x="106" y="-60" width="24" height="120" rx="8" fill="url(#lime-grad)" filter="url(#glow)"/>
+    <rect x="135" y="-45" width="20" height="90" rx="6" fill="#e5e5e5"/>
+    <rect x="159" y="-30" width="16" height="60" rx="5" fill="#a3a3a3"/>
+
+    <!-- Center Badge: SF Monogram -->
+    <circle cx="0" cy="0" r="54" fill="#080808" stroke="url(#lime-grad)" stroke-width="6"/>
+    <text x="0" y="16" font-family="system-ui, -apple-system, sans-serif" font-size="44" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="2">SF</text>
+  </g>
+
+  <!-- Brand Typography -->
+  <text x="256" y="380" font-family="system-ui, -apple-system, sans-serif" font-size="40" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="4">
+    SAMBA<tspan fill="#a3e635">FITNESS</tspan>
+  </text>
+  <text x="256" y="420" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" fill="#a3a3a3" text-anchor="middle" letter-spacing="6">
+    NDIOUM • SÉNÉGAL
+  </text>
+</svg>

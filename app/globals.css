@@ -1,26 +1,93 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@400;500;700;800;900&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #080808;
+  --foreground: #f4f4f4;
+  --font-display: 'Bebas Neue', 'Outfit', sans-serif;
+  --font-body: 'Outfit', sans-serif;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-display);
+  --font-sans: var(--font-body);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #080808;
+  color: #f4f4f4;
+  font-family: var(--font-body), system-ui, sans-serif;
+  overflow-x: hidden;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Titres sport percutants */
+.font-sport {
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
+}
+
+/* Animation Marquee bande défilante infinie */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 22s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Animation bordure lumineuse pour carte recommandée */
+@keyframes glow-border {
+  0%, 100% {
+    border-color: rgba(163, 230, 53, 0.4);
+    box-shadow: 0 0 25px rgba(163, 230, 53, 0.2);
+  }
+  50% {
+    border-color: rgba(163, 230, 53, 1);
+    box-shadow: 0 0 40px rgba(163, 230, 53, 0.45);
+  }
+}
+
+.animate-glow-card {
+  animation: glow-border 3.5s ease-in-out infinite;
+}
+
+/* Validation directe moderne des formulaires (:user-valid / :user-invalid) */
+input:user-valid:not(:placeholder-shown),
+select:user-valid {
+  border-color: rgba(163, 230, 53, 0.7) !important;
+}
+
+input:user-invalid:not(:placeholder-shown) {
+  border-color: rgba(239, 68, 68, 0.8) !important;
+}
+
+/* Respect strict de prefers-reduced-motion pour vieux mobiles / sensibilité */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-marquee {
+    animation: none !important;
+    transform: none !important;
+  }
 }

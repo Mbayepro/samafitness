@@ -1,0 +1,155 @@
+{
+  "members": [
+    {
+      "id": "mem_1792428612760_2b4vy",
+      "full_name": "mairame",
+      "phone": "+221 770362616",
+      "plan_id": "complete",
+      "start_date": "2026-10-19",
+      "end_date": "2026-11-19",
+      "status": "actif",
+      "notes": null,
+      "qr_token": "qr_79q14pv2ge",
+      "created_at": "2026-10-19T16:50:12.760Z",
+      "updated_at": "2026-10-19T16:50:12.760Z"
+    },
+    {
+      "id": "mem_demo_1",
+      "full_name": "Amadou Ba",
+      "phone": "+221 76 345 67 89",
+      "plan_id": "mensuel",
+      "start_date": "2026-10-09",
+      "end_date": "2026-11-08",
+      "status": "actif",
+      "notes": "Inscrit suite à sa visite au club.",
+      "qr_token": "qr_amadou_ba",
+      "created_at": "2026-10-09T16:49:08.034Z",
+      "updated_at": "2026-10-19T16:49:08.034Z"
+    },
+    {
+      "id": "mem_demo_2",
+      "full_name": "Awa Diallo",
+      "phone": "+221 77 456 78 90",
+      "plan_id": "trimestriel",
+      "start_date": "2026-07-26",
+      "end_date": "2026-11-19",
+      "status": "actif",
+      "notes": "Cardio & Musculation après-midi",
+      "qr_token": "qr_awa_diallo",
+      "created_at": "2026-07-26T16:49:08.034Z",
+      "updated_at": "2026-10-19T16:57:46.053Z"
+    },
+    {
+      "id": "mem_demo_3",
+      "full_name": "Ousmane Kane",
+      "phone": "+221 78 567 89 01",
+      "plan_id": "mensuel",
+      "start_date": "2026-09-09",
+      "end_date": "2026-10-09",
+      "status": "expire",
+      "notes": "Relance Wave à effectuer",
+      "qr_token": "qr_ousmane_kane",
+      "created_at": "2026-09-09T16:49:08.034Z",
+      "updated_at": "2026-10-19T16:49:08.034Z"
+    },
+    {
+      "id": "mem_demo_4",
+      "full_name": "Marieme Sy",
+      "phone": "+221 77 678 90 12",
+      "plan_id": "annuel",
+      "start_date": "2026-10-09",
+      "end_date": "2027-09-14",
+      "status": "actif",
+      "notes": "Membre très assidue le matin",
+      "qr_token": "qr_marieme_sy",
+      "created_at": "2026-09-19T16:49:08.034Z",
+      "updated_at": "2026-10-19T16:49:08.034Z"
+    }
+  ],
+  "payments": [
+    {
+      "id": "pay_1792429066053_cja6q",
+      "member_id": "mem_demo_2",
+      "amount_fcfa": 15000,
+      "method": "Wave",
+      "period_start": "2026-10-24",
+      "period_end": "2026-11-19",
+      "note": null,
+      "recorded_by": "demo@local",
+      "created_at": "2026-10-19T16:57:46.053Z",
+      "member_name": "Awa Diallo",
+      "member_phone": "+221 77 456 78 90"
+    },
+    {
+      "id": "pay_demo_1",
+      "member_id": "mem_demo_1",
+      "amount_fcfa": 15000,
+      "method": "Wave",
+      "period_start": "2026-10-09",
+      "period_end": "2026-11-08",
+      "note": "Paiement mensuel",
+      "recorded_by": "Samba Diop",
+      "created_at": "2026-10-09T16:49:08.034Z",
+      "member_name": "Amadou Ba",
+      "member_phone": "+221 76 345 67 89"
+    },
+    {
+      "id": "pay_demo_2",
+      "member_id": "mem_demo_2",
+      "amount_fcfa": 40000,
+      "method": "Orange Money",
+      "period_start": "2026-07-26",
+      "period_end": "2026-10-24",
+      "note": "Forfait 3 mois",
+      "recorded_by": "Samba Diop",
+      "created_at": "2026-07-26T16:49:08.034Z",
+      "member_name": "Awa Diallo",
+      "member_phone": "+221 77 456 78 90"
+    },
+    {
+      "id": "pay_demo_3",
+      "member_id": "mem_demo_4",
+      "amount_fcfa": 150000,
+      "method": "Espèces",
+      "period_start": "2026-10-09",
+      "period_end": "2027-09-14",
+      "note": "Abonnement annuel complet",
+      "recorded_by": "Samba Diop",
+      "created_at": "2026-10-09T16:49:08.034Z",
+      "member_name": "Marieme Sy",
+      "member_phone": "+221 77 678 90 12"
+    }
+  ],
+  "attendances": [
+    {
+      "id": "att_1792429039853_0k9zv",
+      "member_id": "mem_1792428612760_2b4vy",
+      "checked_in_at": "2026-10-19T16:57:19.853Z",
+      "recorded_by": "demo@local",
+      "method": "manuel",
+      "member_name": "mairame",
+      "member_phone": "+221 770362616",
+      "member_status": "actif"
+    },
+    {
+      "id": "att_demo_1",
+      "member_id": "mem_demo_1",
+      "checked_in_at": "2026-10-19T14:49:08.034Z",
+      "recorded_by": "Samba Diop",
+      "method": "manuel",
+      "member_name": "Amadou Ba",
+      "member_phone": "+221 76 345 67 89",
+      "member_status": "actif"
+    },
+    {
+      "id": "att_demo_2",
+      "member_id": "mem_demo_4",
+      "checked_in_at": "2026-10-19T12:49:08.034Z",
+      "recorded_by": "Samba Diop",
+      "method": "manuel",
+      "member_name": "Marieme Sy",
+      "member_phone": "+221 77 678 90 12",
+      "member_status": "actif"
+    }
+  ]
+}
