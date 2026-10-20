@@ -52,4 +52,48 @@ describe("GymPaymentsTab", () => {
     fireEvent.click(addBtn);
     expect(screen.getByText(/Enregistrer un paiement & prolonger/i)).toBeInTheDocument();
   });
+
+  it("affiche les sous-vues Entrées / Sorties pour le super-admin et permet de basculer", () => {
+    const mockExpenses = [
+      {
+        id: "exp_1",
+        amount_fcfa: 50000,
+        category: "loyer" as const,
+        description: "Loyer local Ndioum",
+        paid_at: "2026-10-01",
+        created_at: "2026-10-01T12:00:00Z",
+      },
+    ];
+
+    render(
+      <GymPaymentsTab
+        {...defaultProps}
+        isSuperAdmin={true}
+        expenses={mockExpenses}
+        onRecordExpense={vi.fn()}
+        onDeleteExpense={vi.fn()}
+      />
+    );
+
+    // Vérifie la présence des onglets de sous-vue
+    expect(screen.getByRole("tab", { name: /Entrées \(Paiements\)/i })).toBeInTheDocument();
+    const sortiesTab = screen.getByRole("tab", { name: /Sorties \(Dépenses\)/i });
+    expect(sortiesTab).toBeInTheDocument();
+
+    // Basculer vers Sorties
+    fireEvent.click(sortiesTab);
+    expect(screen.getByText("Loyer local Ndioum")).toBeInTheDocument();
+    const addExpenseBtn = screen.getByText("+ Enregistrer une Dépense");
+    expect(addExpenseBtn).toBeInTheDocument();
+
+    // Ouvrir la modale dépense
+    fireEvent.click(addExpenseBtn);
+    expect(screen.getByRole("heading", { name: /Enregistrer une nouvelle dépense/i })).toBeInTheDocument();
+  });
+
+  it("masque les sorties pour un gérant non super-admin", () => {
+    render(<GymPaymentsTab {...defaultProps} isSuperAdmin={false} />);
+    expect(screen.queryByRole("tab", { name: /Sorties \(Dépenses\)/i })).not.toBeInTheDocument();
+  });
 });
+

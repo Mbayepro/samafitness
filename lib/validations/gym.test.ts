@@ -5,6 +5,7 @@ import {
   memberSchema,
   paymentSchema,
   convertLeadSchema,
+  expenseSchema,
 } from "./gym";
 
 describe("Validations Samba Fitness", () => {
@@ -118,4 +119,44 @@ describe("Validations Samba Fitness", () => {
       expect(res.success).toBe(true);
     });
   });
+
+  describe("expenseSchema (Enregistrement de dépense)", () => {
+    it("doit valider une dépense correcte", () => {
+      const res = expenseSchema.safeParse({
+        amount_fcfa: 75000,
+        category: "loyer",
+        description: "Loyer de la salle Ndioum - Octobre 2026",
+        paid_at: "2026-10-05",
+      });
+      expect(res.success).toBe(true);
+    });
+
+    it("doit refuser un montant négatif ou nul", () => {
+      const res = expenseSchema.safeParse({
+        amount_fcfa: 0,
+        category: "electricite",
+        paid_at: "2026-10-10",
+      });
+      expect(res.success).toBe(false);
+    });
+
+    it("doit refuser une catégorie inconnue", () => {
+      const res = expenseSchema.safeParse({
+        amount_fcfa: 50000,
+        category: "divertissement",
+        paid_at: "2026-10-10",
+      });
+      expect(res.success).toBe(false);
+    });
+
+    it("doit refuser une date au format invalide", () => {
+      const res = expenseSchema.safeParse({
+        amount_fcfa: 50000,
+        category: "materiel",
+        paid_at: "10-10-2026",
+      });
+      expect(res.success).toBe(false);
+    });
+  });
 });
+

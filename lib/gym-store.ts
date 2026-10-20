@@ -45,6 +45,35 @@ export interface Attendance {
   member_status?: MemberStatus;
 }
 
+export type ExpenseCategory =
+  | "loyer"
+  | "electricite"
+  | "eau_internet"
+  | "salaires"
+  | "materiel"
+  | "maintenance"
+  | "autre";
+
+export interface Expense {
+  id: string;
+  amount_fcfa: number;
+  category: ExpenseCategory;
+  description?: string | null;
+  paid_at: string; // YYYY-MM-DD
+  created_by?: string | null;
+  created_at: string; // ISO
+  deleted_at?: string | null;
+  deleted_by?: string | null;
+}
+
+export interface MonthFinancialSummary {
+  monthKey: string;   // YYYY-MM
+  monthLabel: string; // "Jan 26"
+  revenue: number;
+  expenses: number;
+  net: number;
+}
+
 export interface GymStats {
   activeMembers: number;
   expiringSoonMembers: number;
@@ -53,6 +82,9 @@ export interface GymStats {
   todayAttendances: number;
   weekAttendances: number;
   monthRevenueFcfa: number;
+  monthExpensesFcfa: number;
+  monthNetFcfa: number;
+  history6Months: MonthFinancialSummary[];
 }
 
 interface LocalGymData {
@@ -528,10 +560,113 @@ export async function recordAttendance(
 }
 
 // ─────────────────────────────────────────────────────────────
+// DÉPENSES (EXPENSES) - SUPABASE UNIQUEMENT (PAS DE RECOURS JSON)
+// ─────────────────────────────────────────────────────────────
+
+export async function getExpenses(): Promise<Expense[]> {
+  if (!isSupabaseConfigured()) {
+    logger.warn("Tentative de chargement des dépenses alors que Supabase n'est pas configuré.");
+    return [];
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("expenses")
+    .select("*")
+    .is("deleted_at", null)
+    .order("paid_at", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    logger.error({ error }, "Erreur getExpenses Supabase");
+    throw new Error(
+      `Impossible de récupérer les dépenses depuis la base de données : ${error.message}`
+    );
+  }
+
+  return (data || []) as Expense[];
+}
+
+export async function recordExpense(data: {
+  amount_fcfa: number;
+  category: ExpenseCategory;
+  description?: string | null;
+  paid_at: string;
+  created_by?: string | null;
+}): Promise<Expense> {
+  if (!isSupabaseConfigured()) {
+    throw new Error(
+      "Base de données Supabase non configurée. Impossible d'enregistrer la dépense."
+    );
+  }
+
+  const id = `exp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const now = new Date().toISOString();
+
+  const supabase = await createClient();
+  const { data: inserted, error } = await supabase
+    .from("expenses")
+    .insert([
+      {
+        id,
+        amount_fcfa: data.amount_fcfa,
+        category: data.category,
+        description: data.description?.trim() || null,
+        paid_at: data.paid_at,
+        created_by: data.created_by || null,
+        created_at: now,
+      },
+    ])
+    .select()
+    .single();
+
+  if (error || !inserted) {
+    logger.error({ error }, "Erreur recordExpense Supabase");
+    throw new Error(
+      `Échec de l'enregistrement de la dépense dans Supabase : ${error?.message || "Erreur inconnue"}`
+    );
+  }
+
+  return inserted as Expense;
+}
+
+export async function softDeleteExpense(id: string, deletedBy: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    throw new Error(
+      "Base de données Supabase non configurée. Impossible d'archiver la dépense."
+    );
+  }
+
+  const now = new Date().toISOString();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("expenses")
+    .update({
+      deleted_at: now,
+      deleted_by: deletedBy,
+    })
+    .eq("id", id);
+
+  if (error) {
+    logger.error({ error }, "Erreur softDeleteExpense Supabase");
+    throw new Error(`Échec de l'archivage de la dépense : ${error.message}`);
+  }
+
+  return true;
+}
+
+// ─────────────────────────────────────────────────────────────
 // STATISTIQUES GYM (TABLEAU DE BORD)
 // ─────────────────────────────────────────────────────────────
 
 export async function getGymStats(): Promise<GymStats> {
+  let expenses: Expense[] = [];
+  try {
+    expenses = await getExpenses();
+  } catch (err) {
+    logger.warn({ err }, "Impossible de récupérer les dépenses pour les statistiques");
+  }
+
   const [members, payments, attendances] = await Promise.all([
     getMembers(),
     getPayments(),
@@ -556,9 +691,62 @@ export async function getGymStats(): Promise<GymStats> {
     (a) => new Date(a.checked_in_at) >= sevenDaysAgo
   ).length;
 
+  // Calcul basé sur created_at pour être cohérent avec "Encaissé ce mois"
   const monthRevenueFcfa = payments
     .filter((p) => new Date(p.created_at) >= startOfMonth)
     .reduce((sum, p) => sum + (Number(p.amount_fcfa) || 0), 0);
+
+  const monthExpensesFcfa = expenses
+    .filter((e) => new Date(e.created_at) >= startOfMonth)
+    .reduce((sum, e) => sum + (Number(e.amount_fcfa) || 0), 0);
+
+  const monthNetFcfa = monthRevenueFcfa - monthExpensesFcfa;
+
+  // Historique des 6 derniers mois (Revenus vs Dépenses)
+  const monthNames = [
+    "Jan",
+    "Fév",
+    "Mar",
+    "Avr",
+    "Mai",
+    "Juin",
+    "Juil",
+    "Août",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Déc",
+  ];
+  const history6Months: MonthFinancialSummary[] = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    const mYear = d.getFullYear();
+    const mMonth = d.getMonth();
+    const nextM = new Date(mYear, mMonth + 1, 1);
+    const monthKey = `${mYear}-${String(mMonth + 1).padStart(2, "0")}`;
+    const monthLabel = `${monthNames[mMonth]} ${String(mYear).slice(2)}`;
+
+    const rev = payments
+      .filter((p) => {
+        const pDate = new Date(p.created_at);
+        return pDate >= d && pDate < nextM;
+      })
+      .reduce((sum, p) => sum + (Number(p.amount_fcfa) || 0), 0);
+
+    const exp = expenses
+      .filter((e) => {
+        const eDate = new Date(e.created_at);
+        return eDate >= d && eDate < nextM;
+      })
+      .reduce((sum, e) => sum + (Number(e.amount_fcfa) || 0), 0);
+
+    return {
+      monthKey,
+      monthLabel,
+      revenue: rev,
+      expenses: exp,
+      net: rev - exp,
+    };
+  });
 
   return {
     activeMembers,
@@ -568,5 +756,9 @@ export async function getGymStats(): Promise<GymStats> {
     todayAttendances,
     weekAttendances,
     monthRevenueFcfa,
+    monthExpensesFcfa,
+    monthNetFcfa,
+    history6Months,
   };
 }
+

@@ -13,10 +13,12 @@ import {
   recordPaymentAction,
   recordAttendanceAction,
   convertLeadToMemberAction,
+  recordExpenseAction,
+  softDeleteExpenseAction,
 } from "@/app/actions/gym-actions";
 import type { Lead } from "@/lib/leads-store";
 import type { SiteContentType } from "@/lib/content-store";
-import type { Member, PaymentMethod } from "@/lib/gym-store";
+import type { Member, PaymentMethod, ExpenseCategory, Expense } from "@/lib/gym-store";
 import type { FeedbackKind } from "@/app/admin/admin-types";
 
 interface UseAdminActionsParams {
@@ -290,6 +292,42 @@ export function useAdminActions({
     });
   };
 
+  const handleRecordExpense = async (data: {
+    amount_fcfa: number;
+    category: ExpenseCategory;
+    description?: string;
+    paid_at: string;
+  }) => {
+    return new Promise<boolean>((resolve) => {
+      startTransition(async () => {
+        const res = await recordExpenseAction(data);
+        if (!res.success) {
+          showFeedback("error", res.error);
+          resolve(false);
+          return;
+        }
+        await loadData();
+        showFeedback("success", "Dépense enregistrée avec succès.");
+        resolve(true);
+      });
+    });
+  };
+
+  const handleSoftDeleteExpense = (id: string, description?: string | null) => {
+    const label = description ? `« ${description} »` : "cette dépense";
+    if (!confirm(`Confirmez-vous l'archivage de ${label} ?`)) return;
+
+    startTransition(async () => {
+      const res = await softDeleteExpenseAction(id);
+      if (!res.success) {
+        showFeedback("error", res.error);
+        return;
+      }
+      await loadData();
+      showFeedback("success", "Dépense archivée.");
+    });
+  };
+
   return {
     isPending,
     handleUpdateStatus,
@@ -305,5 +343,7 @@ export function useAdminActions({
     handleSaveCoach,
     handleSaveFAQ,
     handleResetDefaults,
+    handleRecordExpense,
+    handleSoftDeleteExpense,
   };
 }

@@ -1,0 +1,168 @@
+/* ─────────────────────────────────────────────────────────────
+   SAMBA FITNESS - DESIGN SYSTEM D'ADMINISTRATION PRO (/admin)
+   Règles strictes :
+   1. Une seule police sans empattement neutre (Geist/Inter). Chiffres tabular-nums.
+   2. Rayons sobres entre 6px et 10px. Aucune pilule (rounded-full).
+   3. Aucune lueur ni ombre colorée. Pas de dégradés décoratifs.
+   4. Couleur #a3e635 strictement réservée au bouton principal (texte foncé dessus).
+   5. Vert sobre pour les statuts positifs, orange/ambre pour "bientôt", rouge pour "expiré".
+   6. Texte minimum 12px partout, 14px pour le texte courant.
+   7. Boutons >= 40px de hauteur sur mobile avec focus visible.
+───────────────────────────────────────────────────────────── */
+
+:root {
+  --admin-font: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Palette de surfaces sobres */
+  --admin-bg-base: #090a0b;
+  --admin-bg-surface: #111315;
+  --admin-bg-surface-hover: #17191d;
+  --admin-bg-subtle: #1a1d21;
+  --admin-border: #23272d;
+  --admin-border-subtle: #1b1e23;
+  --admin-border-focus: #3b424d;
+
+  /* Typographie neutre */
+  --admin-text-primary: #f0f2f5;
+  --admin-text-secondary: #9aa1ad;
+  --admin-text-muted: #6b7280;
+
+  /* Couleur de marque réservée au bouton principal */
+  --admin-brand: #a3e635;
+  --admin-brand-hover: #bef264;
+  --admin-brand-text: #0a0f1d;
+
+  /* Statuts sémantiques discrets */
+  --admin-success-bg: rgba(34, 197, 94, 0.12);
+  --admin-success-border: rgba(34, 197, 94, 0.28);
+  --admin-success-text: #4ade80;
+
+  --admin-warning-bg: rgba(245, 158, 11, 0.12);
+  --admin-warning-border: rgba(245, 158, 11, 0.28);
+  --admin-warning-text: #fbbf24;
+
+  --admin-danger-bg: rgba(239, 68, 68, 0.12);
+  --admin-danger-border: rgba(239, 68, 68, 0.28);
+  --admin-danger-text: #f87171;
+
+  --admin-neutral-bg: rgba(255, 255, 255, 0.04);
+  --admin-neutral-border: rgba(255, 255, 255, 0.08);
+  --admin-neutral-text: #d1d5db;
+
+  /* Rayons standardisés (6-10 px) */
+  --admin-radius-sm: 6px;
+  --admin-radius-md: 8px;
+  --admin-radius-lg: 10px;
+}
+
+.admin-root {
+  font-family: var(--admin-font);
+  background-color: var(--admin-bg-base);
+  color: var(--admin-text-primary);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Chiffres toujours alignés et tabulaires */
+.admin-tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Cartes & Conteneurs */
+.admin-card {
+  background-color: var(--admin-bg-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-md);
+  box-shadow: none;
+}
+
+/* Bouton principal : couleur #a3e635 réservée, texte sombre, >= 40px */
+.admin-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: var(--admin-brand);
+  color: var(--admin-brand-text);
+  font-size: 13px;
+  font-weight: 600;
+  min-height: 40px;
+  padding: 0.5rem 1rem;
+  border-radius: var(--admin-radius-md);
+  border: 1px solid transparent;
+  transition: background-color 150ms ease, opacity 150ms ease;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.admin-btn-primary:hover:not(:disabled) {
+  background-color: var(--admin-brand-hover);
+}
+
+.admin-btn-primary:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.admin-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Bouton secondaire sobre */
+.admin-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: var(--admin-bg-surface);
+  color: var(--admin-text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  min-height: 40px;
+  padding: 0.5rem 0.875rem;
+  border-radius: var(--admin-radius-md);
+  border: 1px solid var(--admin-border);
+  transition: background-color 150ms ease, border-color 150ms ease;
+  cursor: pointer;
+}
+
+.admin-btn-secondary:hover:not(:disabled) {
+  background-color: var(--admin-bg-surface-hover);
+  border-color: var(--admin-border-focus);
+}
+
+.admin-btn-secondary:focus-visible {
+  outline: 2px solid var(--admin-border-focus);
+  outline-offset: 2px;
+}
+
+.admin-btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Champs de saisie admin */
+.admin-input {
+  min-height: 40px;
+  background-color: var(--admin-bg-base);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-md);
+  color: var(--admin-text-primary);
+  font-size: 13px;
+  padding: 0.5rem 0.75rem;
+  transition: border-color 150ms ease;
+}
+
+.admin-input:focus {
+  outline: none;
+  border-color: var(--admin-border-focus);
+}
+
+.admin-input::placeholder {
+  color: var(--admin-text-muted);
+}

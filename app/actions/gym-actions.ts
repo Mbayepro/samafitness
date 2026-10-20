@@ -9,11 +9,16 @@ import {
   getAttendances,
   recordAttendance,
   getGymStats,
+  getExpenses,
+  recordExpense,
+  softDeleteExpense,
   type Member,
   type Payment,
   type Attendance,
   type GymStats,
   type PaymentMethod,
+  type Expense,
+  type ExpenseCategory,
 } from "@/lib/gym-store";
 import { updateLeadStatus } from "@/lib/leads-store";
 import { AdminAuthError, requireAdmin, type AdminRole } from "@/lib/auth/admin";
@@ -46,17 +51,20 @@ export interface GymDataResult {
   payments: Payment[];
   attendances: Attendance[];
   stats: GymStats;
+  expenses: Expense[];
 }
 
 export async function fetchGymDataAction(): Promise<ActionResult<GymDataResult>> {
   return guarded("receptionist", async () => {
-    const [members, payments, attendances, stats] = await Promise.all([
+    const admin = await requireAdmin("receptionist");
+    const [members, payments, attendances, stats, expenses] = await Promise.all([
       getMembers(),
       getPayments(),
       getAttendances(),
       getGymStats(),
+      admin.role === "super_admin" ? getExpenses().catch(() => []) : Promise.resolve([]),
     ]);
-    return { members, payments, attendances, stats };
+    return { members, payments, attendances, stats, expenses };
   });
 }
 
@@ -177,3 +185,44 @@ export async function recordAttendanceAction(
     return res;
   });
 }
+
+export async function recordExpenseAction(data: {
+  amount_fcfa: number;
+  category: ExpenseCategory;
+  description?: string;
+  paid_at: string;
+}): Promise<ActionResult<{ expense: Expense }>> {
+  return guarded("super_admin", async () => {
+    const { expenseSchema } = await import("@/lib/validations/gym");
+    const parsed = expenseSchema.safeParse(data);
+    if (!parsed.success) {
+      throw new AdminAuthError(
+        parsed.error.issues[0]?.message || "Données de dépense invalides."
+      );
+    }
+
+    const admin = await requireAdmin("super_admin");
+    const expense = await recordExpense({
+      ...data,
+      created_by: admin.email,
+    });
+
+    revalidatePath("/admin");
+    return { expense };
+  });
+}
+
+export async function softDeleteExpenseAction(id: string): Promise<ActionResult> {
+  return guarded("super_admin", async () => {
+    if (!id || typeof id !== "string") {
+      throw new AdminAuthError("Identifiant de dépense manquant.");
+    }
+
+    const admin = await requireAdmin("super_admin");
+    await softDeleteExpense(id, admin.email);
+
+    revalidatePath("/admin");
+    return {};
+  });
+}
+

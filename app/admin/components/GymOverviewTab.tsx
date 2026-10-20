@@ -13,6 +13,7 @@ interface GymOverviewTabProps {
   payments?: unknown[];
   attendances: Attendance[];
   leads?: Lead[];
+  isSuperAdmin?: boolean;
   onNavigateTab: (tab: TabKey) => void;
   onQuickCheckIn: (memberId: string) => Promise<void>;
   onOpenNewMemberModal: () => void;
@@ -25,6 +26,7 @@ export default function GymOverviewTab({
   members,
   attendances,
   leads = [],
+  isSuperAdmin = false,
   onNavigateTab,
   onQuickCheckIn,
   showFeedback,
@@ -176,6 +178,29 @@ export default function GymOverviewTab({
   const topRelances = expiredAndExpiringMembers.slice(0, 5);
   const totalTasks = totalRelances + pendingLeads.length;
 
+  // Totaux et échelle pour le graphique sur 6 mois (super-admin)
+  const max6MonthsVal = useMemo(() => {
+    if (!stats.history6Months || stats.history6Months.length === 0) return 100000;
+    const peak = Math.max(
+      ...stats.history6Months.flatMap((m) => [m.revenue, m.expenses])
+    );
+    return Math.max(peak, 100000);
+  }, [stats.history6Months]);
+
+  const totals6Months = useMemo(() => {
+    if (!stats.history6Months || stats.history6Months.length === 0) {
+      return { revenue: 0, expenses: 0, net: 0 };
+    }
+    return stats.history6Months.reduce(
+      (acc, m) => ({
+        revenue: acc.revenue + m.revenue,
+        expenses: acc.expenses + m.expenses,
+        net: acc.net + m.net,
+      }),
+      { revenue: 0, expenses: 0, net: 0 }
+    );
+  }, [stats.history6Months]);
+
   return (
     <div className="space-y-6">
       {/* ── 1. BARRE DE POINTAGE EXPRESS COMPACTE & RESPONSIVE ─────────── */}
@@ -320,8 +345,12 @@ export default function GymOverviewTab({
         )}
       </div>
 
-      {/* ── 2. LIGNE DES 4 CHIFFRES CLÉS COMPACTS ───────────────────────── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {/* ── 2. LIGNE DES CHIFFRES CLÉS COMPACTS (4 OU 6 SELON RÔLE) ───────── */}
+      <div
+        className={`grid grid-cols-2 gap-3 sm:grid-cols-2 ${
+          isSuperAdmin ? "lg:grid-cols-3 xl:grid-cols-6" : "lg:grid-cols-4"
+        }`}
+      >
         {/* Membres Actifs */}
         <button
           type="button"
@@ -377,6 +406,67 @@ export default function GymOverviewTab({
           <p className="mt-0.5 text-[11px] text-white/40 truncate">Wave, OM & Cash</p>
         </button>
 
+        {/* Dépenses du Mois (FCFA) - Super-Admin uniquement */}
+        {isSuperAdmin && (
+          <button
+            type="button"
+            onClick={() => onNavigateTab("finances")}
+            className="group rounded-2xl border border-white/10 bg-[#121212] p-4 text-left transition hover:border-rose-400/40 hover:bg-white/[0.02]"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-white/50">
+                Dépenses Mois
+              </span>
+              <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+            </div>
+            <p className="mt-2 text-2xl font-black text-rose-400">
+              {(stats.monthExpensesFcfa || 0).toLocaleString("fr-FR")}{" "}
+              <span className="text-xs font-bold text-white/40">F</span>
+            </p>
+            <p className="mt-0.5 text-[11px] text-white/40 truncate">Sorties enregistrées</p>
+          </button>
+        )}
+
+        {/* Solde Net du Mois (FCFA) - Super-Admin uniquement */}
+        {isSuperAdmin && (
+          <button
+            type="button"
+            onClick={() => onNavigateTab("finances")}
+            className={`group rounded-2xl border p-4 text-left transition hover:bg-white/[0.02] ${
+              (stats.monthNetFcfa ?? 0) >= 0
+                ? "border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-400/50"
+                : "border-rose-500/30 bg-rose-500/5 hover:border-rose-400/50"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span
+                className={`text-[10px] font-bold uppercase tracking-wider ${
+                  (stats.monthNetFcfa ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"
+                }`}
+              >
+                Solde Net
+              </span>
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  (stats.monthNetFcfa ?? 0) >= 0 ? "bg-emerald-400" : "bg-rose-400"
+                }`}
+              />
+            </div>
+            <p
+              className={`mt-2 text-2xl font-black ${
+                (stats.monthNetFcfa ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"
+              }`}
+            >
+              {(stats.monthNetFcfa ?? 0) > 0 ? "+" : ""}
+              {(stats.monthNetFcfa ?? 0).toLocaleString("fr-FR")}{" "}
+              <span className="text-xs font-bold opacity-60">F</span>
+            </p>
+            <p className="mt-0.5 text-[11px] text-white/40 truncate">
+              {(stats.monthNetFcfa ?? 0) >= 0 ? "Bénéfice ce mois" : "Déficit ce mois"}
+            </p>
+          </button>
+        )}
+
         {/* Relances nécessaires */}
         <button
           type="button"
@@ -397,6 +487,112 @@ export default function GymOverviewTab({
           </p>
         </button>
       </div>
+
+      {/* ── 3. GRAPHIQUE REVENUS VS DÉPENSES SUR 6 MOIS (SUPER-ADMIN) ───── */}
+      {isSuperAdmin && stats.history6Months && stats.history6Months.length > 0 && (
+        <div className="rounded-2xl border border-white/10 bg-[#121212] p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+            <div>
+              <h2 className="text-sm font-black uppercase text-white flex items-center gap-2">
+                <span>Finances · 6 derniers mois</span>
+              </h2>
+              <p className="mt-0.5 text-xs text-white/50">
+                Comparaison mensuelle des entrées d&apos;abonnements et des sorties de caisse.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-sm bg-emerald-400" />
+                <span className="text-white/70 font-semibold">Revenus</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-sm bg-rose-400" />
+                <span className="text-white/70 font-semibold">Dépenses</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigateTab("finances")}
+                className="text-xs font-bold text-lime-400 hover:underline"
+              >
+                Gérer les finances →
+              </button>
+            </div>
+          </div>
+
+          {/* Bar Chart 6 Mois */}
+          <div className="mt-6 grid grid-cols-3 sm:grid-cols-6 gap-3">
+            {stats.history6Months.map((m) => {
+              const revPct = Math.round((m.revenue / max6MonthsVal) * 100);
+              const expPct = Math.round((m.expenses / max6MonthsVal) * 100);
+              const isNetPositive = m.net >= 0;
+
+              return (
+                <div key={m.monthKey} className="flex flex-col items-center">
+                  {/* Zone des barres */}
+                  <div
+                    className="relative flex h-36 w-full items-end justify-center gap-1.5 rounded-xl border border-white/5 bg-black/40 p-2"
+                    title={`${m.monthLabel} : Revenus ${m.revenue.toLocaleString("fr-FR")} F | Dépenses ${m.expenses.toLocaleString("fr-FR")} F | Solde ${m.net.toLocaleString("fr-FR")} F`}
+                  >
+                    {/* Barre Revenus */}
+                    <div
+                      className="w-1/2 max-w-[20px] rounded-t bg-emerald-400 transition-all hover:brightness-110"
+                      style={{ height: `${Math.max(4, revPct)}%` }}
+                    />
+                    {/* Barre Dépenses */}
+                    <div
+                      className="w-1/2 max-w-[20px] rounded-t bg-rose-400 transition-all hover:brightness-110"
+                      style={{ height: `${Math.max(4, expPct)}%` }}
+                    />
+                  </div>
+
+                  {/* Libellé Mois */}
+                  <span className="mt-2 text-xs font-bold text-white truncate max-w-full">
+                    {m.monthLabel}
+                  </span>
+
+                  {/* Solde net du mois */}
+                  <span
+                    className={`mt-0.5 text-[10px] font-black font-mono ${
+                      isNetPositive ? "text-emerald-400" : "text-rose-400"
+                    }`}
+                  >
+                    {isNetPositive ? "+" : ""}
+                    {(m.net / 1000).toFixed(0)}k
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Synthèse cumulée 6 mois */}
+          <div className="mt-6 pt-4 border-t border-white/5 grid grid-cols-3 gap-3 text-center">
+            <div className="rounded-xl bg-white/[0.02] p-2.5">
+              <p className="text-[10px] font-bold uppercase text-white/40">Total Revenus 6m</p>
+              <p className="text-sm font-black text-emerald-400 mt-0.5">
+                {totals6Months.revenue.toLocaleString("fr-FR")} F
+              </p>
+            </div>
+            <div className="rounded-xl bg-white/[0.02] p-2.5">
+              <p className="text-[10px] font-bold uppercase text-white/40">Total Dépenses 6m</p>
+              <p className="text-sm font-black text-rose-400 mt-0.5">
+                {totals6Months.expenses.toLocaleString("fr-FR")} F
+              </p>
+            </div>
+            <div className="rounded-xl bg-white/[0.02] p-2.5">
+              <p className="text-[10px] font-bold uppercase text-white/40">Solde Net Cumulé</p>
+              <p
+                className={`text-sm font-black mt-0.5 ${
+                  totals6Months.net >= 0 ? "text-emerald-400" : "text-rose-400"
+                }`}
+              >
+                {totals6Months.net >= 0 ? "+" : ""}
+                {totals6Months.net.toLocaleString("fr-FR")} F
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── 3. SEUL BLOC "À FAIRE" (RELANCES + DEMANDES WEB) ─────────────── */}
       <div className="rounded-2xl border border-white/10 bg-[#121212] p-5">

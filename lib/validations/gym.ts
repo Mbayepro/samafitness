@@ -107,3 +107,33 @@ export const convertLeadSchema = z.object({
 });
 
 export type ConvertLeadInput = z.infer<typeof convertLeadSchema>;
+
+/**
+ * Expense Record Schema
+ */
+export const EXPENSE_CATEGORIES = [
+  "loyer",
+  "electricite",
+  "eau_internet",
+  "salaires",
+  "materiel",
+  "maintenance",
+  "autre",
+] as const;
+
+export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
+
+export const expenseSchema = z.object({
+  amount_fcfa: z
+    .number()
+    .int("Le montant doit être un entier.")
+    .positive("Le montant doit être supérieur à 0 FCFA.")
+    .max(50000000, "Montant excessif."),
+  category: z.enum(EXPENSE_CATEGORIES),
+  description: z.string().trim().max(500, "Description trop longue.").optional().or(z.literal("")),
+  paid_at: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Format de date invalide (AAAA-MM-JJ)."),
+});
+
+export type ExpenseInput = z.infer<typeof expenseSchema>;

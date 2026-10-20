@@ -5,7 +5,7 @@ import { fetchAdminData } from "@/app/actions/admin-actions";
 import { fetchGymDataAction } from "@/app/actions/gym-actions";
 import type { Lead } from "@/lib/leads-store";
 import type { SiteContentType } from "@/lib/content-store";
-import type { Member, Payment, Attendance, GymStats } from "@/lib/gym-store";
+import type { Member, Payment, Attendance, GymStats, Expense } from "@/lib/gym-store";
 import { logger } from "@/lib/logger";
 import type { FeedbackKind } from "@/app/admin/admin-types";
 
@@ -16,6 +16,7 @@ export function useAdminData(showFeedback: (type: FeedbackKind, text: string) =>
   const [members, setMembers] = useState<Member[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [attendances, setAttendances] = useState<Attendance[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [stats, setStats] = useState<GymStats | null>(null);
   const [loadingData, setLoadingData] = useState(true);
 
@@ -35,6 +36,7 @@ export function useAdminData(showFeedback: (type: FeedbackKind, text: string) =>
         setMembers(gymRes.members);
         setPayments(gymRes.payments);
         setAttendances(gymRes.attendances);
+        setExpenses(gymRes.expenses || []);
         setStats(gymRes.stats);
       } else {
         showFeedback("error", gymRes.error);
@@ -64,6 +66,7 @@ export function useAdminData(showFeedback: (type: FeedbackKind, text: string) =>
           setMembers(gymRes.members);
           setPayments(gymRes.payments);
           setAttendances(gymRes.attendances);
+          setExpenses(gymRes.expenses || []);
           setStats(gymRes.stats);
         } else {
           showFeedback("error", gymRes.error);
@@ -90,6 +93,8 @@ export function useAdminData(showFeedback: (type: FeedbackKind, text: string) =>
     members,
     payments,
     attendances,
+    expenses,
+    setExpenses,
     stats,
     loadingData,
     loadData,

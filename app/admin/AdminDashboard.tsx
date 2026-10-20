@@ -62,6 +62,11 @@ export default function AdminDashboard({ admin }: { admin: AdminContext }) {
     todayAttendances: 0,
     weekAttendances: 0,
     monthRevenueFcfa: data.payments.reduce((acc, p) => acc + (p.amount_fcfa || 0), 0),
+    monthExpensesFcfa: data.expenses.reduce((acc, e) => acc + (e.amount_fcfa || 0), 0),
+    monthNetFcfa:
+      data.payments.reduce((acc, p) => acc + (p.amount_fcfa || 0), 0) -
+      data.expenses.reduce((acc, e) => acc + (e.amount_fcfa || 0), 0),
+    history6Months: [],
   };
   const activeStats = data.stats || defaultStats;
 
@@ -119,6 +124,7 @@ export default function AdminDashboard({ admin }: { admin: AdminContext }) {
               payments={data.payments}
               attendances={data.attendances}
               leads={data.leads}
+              isSuperAdmin={isSuperAdmin}
               onNavigateTab={(tab) => selectTab(tab)}
               onQuickCheckIn={actions.handleQuickCheckIn}
               onOpenNewMemberModal={() => selectTab("members")}
@@ -177,9 +183,13 @@ export default function AdminDashboard({ admin }: { admin: AdminContext }) {
           <div className="mt-8">
             <GymPaymentsTab
               payments={data.payments}
+              expenses={data.expenses}
               members={data.members}
+              isSuperAdmin={isSuperAdmin}
               preSelectedMember={preSelectedMemberForPayment}
               onRecordPayment={actions.handleRecordPayment}
+              onRecordExpense={actions.handleRecordExpense}
+              onDeleteExpense={actions.handleSoftDeleteExpense}
               showFeedback={showFeedback}
             />
           </div>

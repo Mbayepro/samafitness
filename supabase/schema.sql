@@ -321,7 +321,52 @@ create policy "Super admin peut supprimer les présences"
 
 
 -- ==============================================================================
--- 8. INDEX DE PERFORMANCE SUPPLÉMENTAIRES (PHASE 3.5)
+-- 8. MODULE FINANCES : TABLE DES DÉPENSES (EXPENSES) AVEC SOFT DELETE & RLS
+-- ==============================================================================
+create table if not exists public.expenses (
+    id text primary key default ('exp_' || extract(epoch from now())::bigint || '_' || substr(md5(random()::text), 1, 6)),
+    amount_fcfa integer not null check (amount_fcfa > 0),
+    category text not null check (category in ('loyer', 'electricite', 'eau_internet', 'salaires', 'materiel', 'maintenance', 'autre')),
+    description text,
+    paid_at date not null default current_date,
+    created_by text,
+    created_at timestamptz not null default now(),
+    deleted_at timestamptz default null,
+    deleted_by text default null
+);
+
+create index if not exists idx_expenses_paid_at on public.expenses (paid_at desc);
+create index if not exists idx_expenses_created_at on public.expenses (created_at desc);
+create index if not exists idx_expenses_category on public.expenses (category);
+create index if not exists idx_expenses_deleted_at on public.expenses (deleted_at);
+
+alter table public.expenses enable row level security;
+
+drop policy if exists "Super admin peut lire les dépenses" on public.expenses;
+create policy "Super admin peut lire les dépenses"
+    on public.expenses
+    for select
+    to authenticated
+    using (private.is_super_admin());
+
+drop policy if exists "Super admin peut insérer des dépenses" on public.expenses;
+create policy "Super admin peut insérer des dépenses"
+    on public.expenses
+    for insert
+    to authenticated
+    with check (private.is_super_admin());
+
+drop policy if exists "Super admin peut modifier ou archiver des dépenses" on public.expenses;
+create policy "Super admin peut modifier ou archiver des dépenses"
+    on public.expenses
+    for update
+    to authenticated
+    using (private.is_super_admin())
+    with check (private.is_super_admin());
+
+
+-- ==============================================================================
+-- 9. INDEX DE PERFORMANCE SUPPLÉMENTAIRES (PHASE 3.5)
 -- ==============================================================================
 CREATE INDEX IF NOT EXISTS idx_members_plan_status ON public.members (plan_id, status);
 CREATE INDEX IF NOT EXISTS idx_payments_method_date ON public.payments (method, created_at DESC);

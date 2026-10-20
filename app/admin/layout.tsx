@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "./admin-theme.css";
 
 export const metadata: Metadata = {
   title: "Administration | Samba Fitness Ndioum",
@@ -8,5 +9,5 @@ export const metadata: Metadata = {
 export const instant = false;
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <div className="admin-root">{children}</div>;
 }
