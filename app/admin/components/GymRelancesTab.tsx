@@ -37,14 +37,14 @@ export default function GymRelancesTab({
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* ── EN-TÊTE DE SECTION ───────────────────────────────────────── */}
-      <div className="flex flex-col gap-4 rounded-3xl border border-amber-500/30 bg-gradient-to-r from-amber-950/30 via-[#121212] to-black p-6">
+      <div className="flex flex-col gap-3 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-950/30 via-[#121212] to-black p-4 sm:p-5">
         <div>
-          <span className="rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-[11px] font-black uppercase text-amber-400">
+          <span className="rounded-full border border-amber-400/40 bg-amber-400/10 px-2.5 py-0.5 text-[10px] font-black uppercase text-amber-400">
             Module Relances Adhérents
           </span>
-          <h2 className="mt-2 text-xl font-black uppercase text-white">
+          <h2 className="mt-1.5 text-base sm:text-lg font-black uppercase text-white">
             Renouvellements & Abonnements à relancer
           </h2>
           <p className="mt-1 text-xs text-white/60">
@@ -53,39 +53,39 @@ export default function GymRelancesTab({
         </div>
 
         {/* Filtres rapides */}
-        <div className="flex flex-wrap items-center gap-3 pt-2">
+        <div className="flex flex-wrap items-center gap-2.5 pt-1">
           <input
             type="text"
             placeholder="Rechercher par nom..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full sm:w-60 rounded-xl border border-white/10 bg-black/50 px-4 py-2 text-xs text-white placeholder-white/30 focus:border-amber-400 focus:outline-none"
+            className="w-full sm:w-60 rounded-xl border border-white/10 bg-black/50 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:border-amber-400 focus:outline-none"
           />
 
-          <div className="inline-flex rounded-xl border border-white/10 bg-black/50 p-1">
+          <div className="flex flex-wrap items-center gap-1 rounded-xl border border-white/10 bg-black/50 p-1">
             <button
               onClick={() => setFilterType("all")}
-              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+              className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition ${
                 filterType === "all" ? "bg-amber-400 text-black" : "text-white/60 hover:text-white"
               }`}
             >
-              Tous à relancer ({needingFollowUp.length})
+              Tous ({needingFollowUp.length})
             </button>
             <button
               onClick={() => setFilterType("soon")}
-              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+              className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition ${
                 filterType === "soon" ? "bg-amber-400 text-black" : "text-white/60 hover:text-white"
               }`}
             >
-              Expire sous 7j ({needingFollowUp.filter((m) => m.status === "expire_bientot").length})
+              Sous 7j ({needingFollowUp.filter((m) => m.status === "expire_bientot").length})
             </button>
             <button
               onClick={() => setFilterType("expired")}
-              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+              className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition ${
                 filterType === "expired" ? "bg-amber-400 text-black" : "text-white/60 hover:text-white"
               }`}
             >
-              Déjà expirés ({needingFollowUp.filter((m) => m.status === "expire").length})
+              Expirés ({needingFollowUp.filter((m) => m.status === "expire").length})
             </button>
           </div>
         </div>
@@ -93,17 +93,17 @@ export default function GymRelancesTab({
 
       {/* ── LISTE DES MEMBRES À RELANCER ────────────────────────────── */}
       {filtered.length === 0 ? (
-        <div className="rounded-3xl border border-white/10 bg-[#121212] p-12 text-center">
-          <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-xs font-black text-white/40">
+        <div className="rounded-2xl border border-white/10 bg-[#121212] p-10 text-center">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-xs font-black text-white/40">
             OK
           </span>
-          <h3 className="mt-3 text-lg font-bold text-white">Aucun membre à relancer !</h3>
+          <h3 className="mt-2 text-sm font-bold text-white">Aucun membre à relancer !</h3>
           <p className="mt-1 text-xs text-white/50">
             Tous les adhérents de Samba Fitness Ndioum sont actuellement en règle avec un abonnement actif.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
           {filtered.map((member) => {
             const whatsappNumber = formatSenegalPhoneForWhatsApp(member.phone);
 
@@ -131,7 +131,7 @@ export default function GymRelancesTab({
             return (
               <div
                 key={member.id}
-                className="flex flex-col justify-between rounded-3xl border border-white/10 bg-[#121212] p-6 transition hover:border-amber-400/30"
+                className="flex flex-col justify-between rounded-2xl border border-white/10 bg-[#121212] p-4 sm:p-5 transition hover:border-amber-400/30"
               >
                 <div>
                   <div className="flex items-start justify-between">

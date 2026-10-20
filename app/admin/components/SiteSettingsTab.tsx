@@ -47,11 +47,11 @@ export default function SiteSettingsTab({
   ];
 
   return (
-    <div className="mt-8 space-y-6">
+    <div className="space-y-4">
       {/* En-tête des paramètres du site */}
-      <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-[#121212] p-6 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#121212] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
         <div>
-          <h2 className="text-lg font-black uppercase text-white flex items-center gap-2">
+          <h2 className="text-base sm:text-lg font-black uppercase text-white flex items-center gap-2">
             <span>Configuration du Site Vitrine</span>
           </h2>
           <p className="mt-1 text-xs text-white/50">

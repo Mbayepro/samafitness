@@ -6,6 +6,7 @@ import type { Lead } from "@/lib/leads-store";
 import MemberBadgeCardModal from "./MemberBadgeCardModal";
 import GymRelancesTab from "./GymRelancesTab";
 import LeadsTab from "./LeadsTab";
+import { formatSenegalPhoneForWhatsApp } from "@/lib/whatsapp";
 
 interface GymMembersTabProps {
   members: Member[];
@@ -232,82 +233,74 @@ export default function GymMembersTab({
 
       {/* ── VUE LISTE DES ADHÉRENTS ──────────────────────────────────── */}
       {subTab === "list" && (
-        <>
-          {/* ── TOP ACTION BAR ────────────────────────────────────────── */}
-          <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-[#121212] p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 flex-wrap items-center gap-3">
-          <input
-            type="text"
-            placeholder="Rechercher par nom, téléphone..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full sm:w-72 rounded-xl border border-white/10 bg-black/50 px-4 py-2.5 text-xs text-white placeholder-white/30 focus:border-lime-400 focus:outline-none"
-          />
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#121212]">
+          {/* ── BARRE D'OUTILS ET RECHERCHE INTÉGRÉE ────────────────── */}
+          <div className="flex flex-col gap-3 border-b border-white/10 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <div className="flex flex-1 flex-wrap items-center gap-2.5">
+              <input
+                type="text"
+                placeholder="Rechercher par nom, téléphone..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full sm:w-64 rounded-xl border border-white/10 bg-black/50 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:border-lime-400 focus:outline-none"
+              />
 
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-white/10 bg-black/50 px-3 py-2.5 text-xs text-white focus:border-lime-400 focus:outline-none"
-          >
-            <option value="all">Tous les statuts ({members.length})</option>
-            <option value="actif">Actifs ({members.filter((m) => m.status === "actif").length})</option>
-            <option value="expire_bientot">
-              Expire bientôt ({members.filter((m) => m.status === "expire_bientot").length})
-            </option>
-            <option value="expire">
-              Expirés ({members.filter((m) => m.status === "expire").length})
-            </option>
-          </select>
-        </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-xs text-white focus:border-lime-400 focus:outline-none"
+              >
+                <option value="all">Tous les statuts ({members.length})</option>
+                <option value="actif">Actifs ({members.filter((m) => m.status === "actif").length})</option>
+                <option value="expire_bientot">
+                  Expire bientôt ({members.filter((m) => m.status === "expire_bientot").length})
+                </option>
+                <option value="expire">
+                  Expirés ({members.filter((m) => m.status === "expire").length})
+                </option>
+              </select>
+            </div>
 
-        <button
-          onClick={openCreateModal}
-          className="rounded-xl bg-lime-400 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-black transition hover:bg-lime-300 shadow-md shadow-lime-400/20"
-        >
-          + Inscrire un Membre
-        </button>
-      </div>
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="rounded-xl bg-lime-400 px-4 py-2 text-xs font-black uppercase tracking-wider text-black transition hover:bg-lime-300 shadow-md shadow-lime-400/20"
+            >
+              + Inscrire un Membre
+            </button>
+          </div>
 
-      {/* ── LISTE DES MEMBRES ─────────────────────────────────────── */}
-      {filteredMembers.length === 0 ? (
-        <div className="rounded-3xl border border-white/10 bg-[#121212] p-12 text-center">
-          <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-xs font-black text-white/40">
-            MEM
-          </span>
-          <h3 className="mt-3 text-lg font-bold text-white">Aucun membre trouvé</h3>
-          <p className="mt-1 text-xs text-white/50">
-            {search || statusFilter !== "all"
-              ? "Aucun résultat ne correspond à votre filtre."
-              : "Cliquez sur « Inscrire un Membre » pour ajouter votre premier adhérent."}
-          </p>
-        </div>
-      ) : (
-        <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#121212]">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-white/10 bg-black/40 text-[10px] font-black uppercase tracking-wider text-white/50">
-                  <th className="py-4 px-6">Adhérent</th>
-                  <th className="py-4 px-4">Formule</th>
-                  <th className="py-4 px-4">Période</th>
-                  <th className="py-4 px-4">Statut</th>
-                  <th className="py-4 px-6 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5 text-xs">
-                {filteredMembers.map((member) => {
-                  const cleanPhone = member.phone.replace(/[^0-9+]/g, "");
-                  const whatsappNumber = cleanPhone.startsWith("+")
-                    ? cleanPhone.substring(1)
-                    : cleanPhone.startsWith("00")
-                    ? cleanPhone.substring(2)
-                    : cleanPhone.startsWith("7")
-                    ? `221${cleanPhone}`
-                    : cleanPhone;
-
-                  const whatsappMsg = encodeURIComponent(
-                    `Bonjour ${member.full_name}, c'est Samba Diop de Samba Fitness Ndioum.`
-                  );
+          {/* ── LISTE DES MEMBRES ─────────────────────────────────────── */}
+          {filteredMembers.length === 0 ? (
+            <div className="p-12 text-center">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-xs font-black text-white/40">
+                MEM
+              </span>
+              <h3 className="mt-3 text-lg font-bold text-white">Aucun membre trouvé</h3>
+              <p className="mt-1 text-xs text-white/50">
+                {search || statusFilter !== "all"
+                  ? "Aucun résultat ne correspond à votre filtre."
+                  : "Cliquez sur « Inscrire un Membre » pour ajouter votre premier adhérent."}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-white/10 bg-black/40 text-[10px] font-black uppercase tracking-wider text-white/50">
+                    <th className="py-4 px-6">Adhérent</th>
+                    <th className="py-4 px-4">Formule</th>
+                    <th className="py-4 px-4">Période</th>
+                    <th className="py-4 px-4">Statut</th>
+                    <th className="py-4 px-6 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5 text-xs">
+                  {filteredMembers.map((member) => {
+                    const whatsappNumber = formatSenegalPhoneForWhatsApp(member.phone);
+                    const whatsappMsg = encodeURIComponent(
+                      `Bonjour ${member.full_name}, c'est Samba Diop de Samba Fitness Ndioum.`
+                    );
 
                   return (
                     <tr
@@ -431,8 +424,9 @@ export default function GymMembersTab({
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+    )}
 
       {/* ── MODAL NOUVEAU / MODIFIER MEMBRE ───────────────────────── */}
       {isModalOpen && (
@@ -584,8 +578,6 @@ export default function GymMembersTab({
           </div>
         </div>
       )}
-    </>
-  )}
 
       {/* Member Badge & QR Code Modal */}
       {badgeMember && (

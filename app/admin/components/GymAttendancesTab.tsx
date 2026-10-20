@@ -98,7 +98,7 @@ export default function GymAttendancesTab({
   return (
     <div className="space-y-6">
       {/* ── GRAPHIQUE FRÉQUENTATION (7 DERNIERS JOURS) ─────────────── */}
-      <div className="rounded-3xl border border-white/10 bg-[#121212] p-6">
+      <div className="rounded-2xl border border-white/10 bg-[#121212] p-4 sm:p-5">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-black uppercase text-white">
@@ -140,20 +140,20 @@ export default function GymAttendancesTab({
       </div>
 
       {/* ── MODULE POINTAGE RAPIDE AVEC VÉRIFICATION D'EXPIRATION ── */}
-      <div className="rounded-3xl border border-white/10 bg-[#121212] p-6">
-        <h3 className="text-sm font-black uppercase text-white">
+      <div className="rounded-2xl border border-white/10 bg-[#121212] p-4 sm:p-5">
+        <h2 className="text-sm font-black uppercase text-white tracking-wide">
           Enregistrer une entrée à la salle
-        </h3>
-        <p className="mt-1 text-xs text-white/50">
+        </h2>
+        <p className="mt-0.5 text-xs text-white/50">
           Sélectionnez le membre pour vérifier la validité de son forfait et pointer sa présence.
         </p>
 
-        <form onSubmit={handleCheckIn} className="mt-5 space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <form onSubmit={handleCheckIn} className="mt-4 space-y-3">
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
             <select
               value={selectedMemberId}
               onChange={(e) => setSelectedMemberId(e.target.value)}
-              className="flex-1 rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-xs text-white focus:border-lime-400 focus:outline-none"
+              className="flex-1 rounded-xl border border-white/15 bg-black/60 px-3.5 py-2.5 text-xs text-white focus:border-lime-400 focus:outline-none"
             >
               <option value="">-- Choisir un membre adhérent --</option>
               {members.map((m) => (
@@ -167,7 +167,7 @@ export default function GymAttendancesTab({
             <button
               type="submit"
               disabled={!selectedMemberId || submitting}
-              className="rounded-xl bg-lime-400 px-6 py-3 text-xs font-black uppercase tracking-wider text-black hover:bg-lime-300 disabled:opacity-40 transition shadow-md shadow-lime-400/20"
+              className="rounded-xl bg-lime-400 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-black hover:bg-lime-300 disabled:opacity-40 transition shadow-md shadow-lime-400/20"
             >
               {submitting ? "Pointage..." : "Valider l'entrée"}
             </button>
@@ -175,7 +175,7 @@ export default function GymAttendancesTab({
             <button
               type="button"
               onClick={() => setIsScannerOpen(true)}
-              className="flex items-center justify-center gap-2 rounded-xl border border-lime-400/50 bg-lime-400/10 px-6 py-3 text-xs font-black uppercase tracking-wider text-lime-400 hover:bg-lime-400 hover:text-black transition"
+              className="flex items-center justify-center gap-2 rounded-xl border border-lime-400/50 bg-lime-400/10 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-lime-400 hover:bg-lime-400 hover:text-black transition"
             >
               <span>Scanner QR</span>
             </button>
@@ -184,7 +184,7 @@ export default function GymAttendancesTab({
           {/* ALERTE MEMBRE SÉLECTIONNÉ */}
           {selectedMember && (
             <div
-              className={`flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between ${
+              className={`flex flex-col gap-2.5 rounded-xl border p-3.5 sm:flex-row sm:items-center sm:justify-between ${
                 selectedMember.status === "actif"
                   ? "border-lime-400/30 bg-lime-400/5 text-lime-400"
                   : selectedMember.status === "expire_bientot"
@@ -192,8 +192,8 @@ export default function GymAttendancesTab({
                   : "border-red-500/40 bg-red-500/10 text-red-400"
               }`}
             >
-              <div className="flex items-center gap-3">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-black/30 text-[10px] font-black uppercase">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-black/30 text-[10px] font-black uppercase">
                   {selectedMember.status === "actif" ? "OK" : selectedMember.status === "expire_bientot" ? "ATTN" : "EXP"}
                 </span>
                 <div>
@@ -213,7 +213,7 @@ export default function GymAttendancesTab({
                 <button
                   type="button"
                   onClick={() => onOpenPaymentForMember(selectedMember)}
-                  className="rounded-xl bg-white px-4 py-2 text-xs font-black uppercase text-black hover:bg-gray-100 transition"
+                  className="rounded-lg bg-white px-3 py-1.5 text-xs font-black uppercase text-black hover:bg-gray-100 transition"
                 >
                   Renouveler maintenant
                 </button>
@@ -223,65 +223,69 @@ export default function GymAttendancesTab({
         </form>
       </div>
 
-      {/* ── BARRE DE FILTRE HISTORIQUE ────────────────────────────── */}
-      <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-[#121212] p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 flex-wrap items-center gap-3">
-          <input
-            type="text"
-            placeholder="Rechercher par nom..."
-            value={searchFilter}
-            onChange={(e) => setSearchFilter(e.target.value)}
-            className="w-full sm:w-64 rounded-xl border border-white/10 bg-black/50 px-4 py-2.5 text-xs text-white placeholder-white/30 focus:border-lime-400 focus:outline-none"
-          />
+      {/* ── TABLEAU ET FILTRES HISTORIQUE UNIFIÉS ───────────────────── */}
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#121212]">
+        {/* Barre de filtre intégrée */}
+        <div className="flex flex-col gap-3 border-b border-white/10 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div className="flex flex-1 flex-wrap items-center gap-2.5">
+            <input
+              type="text"
+              placeholder="Rechercher par nom..."
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              className="w-full sm:w-64 rounded-xl border border-white/10 bg-black/50 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:border-lime-400 focus:outline-none"
+            />
 
-          <div className="inline-flex rounded-xl border border-white/10 bg-black/50 p-1">
-            <button
-              onClick={() => setDateFilter("today")}
-              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-                dateFilter === "today" ? "bg-lime-400 text-black" : "text-white/60 hover:text-white"
-              }`}
-            >
-              Aujourd&apos;hui ({todayCount})
-            </button>
-            <button
-              onClick={() => setDateFilter("week")}
-              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-                dateFilter === "week" ? "bg-lime-400 text-black" : "text-white/60 hover:text-white"
-              }`}
-            >
-              7 jours
-            </button>
-            <button
-              onClick={() => setDateFilter("all")}
-              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-                dateFilter === "all" ? "bg-lime-400 text-black" : "text-white/60 hover:text-white"
-              }`}
-            >
-              Tout
-            </button>
+            <div className="flex flex-wrap items-center gap-1 rounded-xl border border-white/10 bg-black/50 p-1">
+              <button
+                type="button"
+                onClick={() => setDateFilter("today")}
+                className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                  dateFilter === "today" ? "bg-lime-400 text-black" : "text-white/60 hover:text-white"
+                }`}
+              >
+                Aujourd&apos;hui ({todayCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setDateFilter("week")}
+                className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                  dateFilter === "week" ? "bg-lime-400 text-black" : "text-white/60 hover:text-white"
+                }`}
+              >
+                7 jours
+              </button>
+              <button
+                type="button"
+                onClick={() => setDateFilter("all")}
+                className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                  dateFilter === "all" ? "bg-lime-400 text-black" : "text-white/60 hover:text-white"
+                }`}
+              >
+                Tout
+              </button>
+            </div>
+          </div>
+
+          <div className="text-xs text-white/50">
+            <span className="font-bold text-white">{filteredAttendances.length}</span> passage(s) listé(s)
           </div>
         </div>
 
-        <div className="text-xs text-white/50">
-          <span className="font-bold text-white">{filteredAttendances.length}</span> passage(s) listé(s)
-        </div>
-      </div>
-
-      {/* ── TABLEAU DES PRÉSENCES ─────────────────────────────────── */}
-      {filteredAttendances.length === 0 ? (
-        <div className="rounded-3xl border border-white/10 bg-[#121212] p-12 text-center">
-          <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-xs font-black text-white/40">
-            PRÉ
-          </span>
-          <h3 className="mt-3 text-lg font-bold text-white">Aucun passage enregistré</h3>
-          <p className="mt-1 text-xs text-white/50">
-            {dateFilter === "today"
-              ? "Aucune entrée enregistrée pour le moment aujourd'hui."
-              : "Aucune présence ne correspond aux filtres sélectionnés."}
-          </p>
-        </div>
-      ) : (
-        <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#121212]">
+        {/* Contenu du tableau ou état vide */}
+        {filteredAttendances.length === 0 ? (
+          <div className="p-12 text-center">
+            <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-xs font-black text-white/40">
+              PRÉ
+            </span>
+            <h3 className="mt-3 text-lg font-bold text-white">Aucun passage enregistré</h3>
+            <p className="mt-1 text-xs text-white/50">
+              {dateFilter === "today"
+                ? "Aucune entrée enregistrée pour le moment aujourd'hui."
+                : "Aucune présence ne correspond aux filtres sélectionnés."}
+            </p>
+          </div>
+        ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -344,8 +348,8 @@ export default function GymAttendancesTab({
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* QR Code Scanner / Camera / Douchette Modal */}
       {isScannerOpen && (

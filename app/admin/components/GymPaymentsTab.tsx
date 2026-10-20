@@ -179,13 +179,13 @@ export default function GymPaymentsTab({
   return (
     <div className="space-y-6">
       {/* ── RÉPARTITION DES PAIEMENTS DU MOIS ───────────────────────── */}
-      <div className="rounded-3xl border border-white/10 bg-[#121212] p-6">
+      <div className="rounded-2xl border border-white/10 bg-[#121212] p-4 sm:p-5">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-sm font-black uppercase text-white">
+            <h2 className="text-sm font-black uppercase text-white tracking-wide">
               Répartition par méthode (Mois en cours)
-            </h3>
-            <p className="text-xs text-white/50">
+            </h2>
+            <p className="mt-0.5 text-xs text-white/50">
               Total encaissé ce mois :{" "}
               <strong className="text-emerald-400">
                 {(waveTotal + omTotal + cashTotal).toLocaleString("fr-FR")} FCFA
@@ -194,9 +194,9 @@ export default function GymPaymentsTab({
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
           {/* Wave */}
-          <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
+          <div className="rounded-xl bg-white/[0.03] p-3.5">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-[#1DC0EF]">Wave</span>
               <span className="text-[11px] font-black text-white/70">{wavePct}%</span>
@@ -211,7 +211,7 @@ export default function GymPaymentsTab({
           </div>
 
           {/* Orange Money */}
-          <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
+          <div className="rounded-xl bg-white/[0.03] p-3.5">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-[#FF7900]">Orange Money</span>
               <span className="text-[11px] font-black text-white/70">{omPct}%</span>
@@ -226,7 +226,7 @@ export default function GymPaymentsTab({
           </div>
 
           {/* Espèces */}
-          <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
+          <div className="rounded-xl bg-white/[0.03] p-3.5">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-emerald-400">Espèces</span>
               <span className="text-[11px] font-black text-white/70">{cashPct}%</span>
@@ -242,52 +242,56 @@ export default function GymPaymentsTab({
         </div>
       </div>
 
-      {/* ── BARRE D'ACTIONS & FILTRES ──────────────────────────────── */}
-      <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-[#121212] p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 flex-wrap items-center gap-3">
-          <input
-            type="text"
-            placeholder="Rechercher par adhérent..."
-            value={searchFilter}
-            onChange={(e) => setSearchFilter(e.target.value)}
-            className="w-full sm:w-64 rounded-xl border border-white/10 bg-black/50 px-4 py-2.5 text-xs text-white placeholder-white/30 focus:border-lime-400 focus:outline-none"
-          />
+      {/* ── TABLEAU ET ACTIONS FINANCES UNIFIÉS ──────────────────────── */}
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#121212]">
+        {/* Barre d'outils / Filtres intégrée */}
+        <div className="flex flex-col gap-4 border-b border-white/10 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div className="flex flex-1 flex-wrap items-center gap-2.5">
+            <input
+              type="text"
+              placeholder="Rechercher par adhérent..."
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              className="w-full sm:w-64 rounded-xl border border-white/10 bg-black/50 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:border-lime-400 focus:outline-none"
+            />
 
-          <select
-            value={methodFilter}
-            onChange={(e) => setMethodFilter(e.target.value)}
-            className="rounded-xl border border-white/10 bg-black/50 px-3 py-2.5 text-xs text-white focus:border-lime-400 focus:outline-none"
-          >
-            <option value="all">Tous les moyens</option>
-            <option value="Wave">Wave</option>
-            <option value="Orange Money">Orange Money</option>
-            <option value="Espèces">Espèces</option>
-          </select>
+            <select
+              value={methodFilter}
+              onChange={(e) => setMethodFilter(e.target.value)}
+              className="rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-xs text-white focus:border-lime-400 focus:outline-none"
+            >
+              <option value="all">Tous les moyens</option>
+              <option value="Wave">Wave</option>
+              <option value="Orange Money">Orange Money</option>
+              <option value="Espèces">Espèces</option>
+            </select>
 
-          <span className="text-xs text-white/50">
-            Total : <strong className="text-emerald-400">{totalFilteredFcfa.toLocaleString("fr-FR")} FCFA</strong>
-          </span>
+            <span className="text-xs text-white/50">
+              Total : <strong className="text-emerald-400">{totalFilteredFcfa.toLocaleString("fr-FR")} FCFA</strong>
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className="rounded-xl border border-white/15 bg-white/5 px-3.5 py-2 text-xs font-bold text-white hover:border-lime-400 hover:text-lime-400 transition"
+            >
+              Exporter CSV
+            </button>
+            <button
+              type="button"
+              onClick={() => openNewPaymentModal()}
+              className="rounded-xl bg-lime-400 px-4 py-2 text-xs font-black uppercase tracking-wider text-black hover:bg-lime-300 transition shadow-md shadow-lime-400/20"
+            >
+              + Encaisser un Paiement
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleExportCSV}
-            className="rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-xs font-bold text-white hover:border-lime-400 hover:text-lime-400 transition"
-          >
-            Exporter CSV
-          </button>
-          <button
-            onClick={() => openNewPaymentModal()}
-            className="rounded-xl bg-lime-400 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-black hover:bg-lime-300 transition shadow-md shadow-lime-400/20"
-          >
-            + Encaisser un Paiement
-          </button>
-        </div>
-      </div>
-
-      {/* ── TABLEAU DES PAIEMENTS ─────────────────────────────────── */}
-      {filteredPayments.length === 0 ? (
-        <div className="rounded-3xl border border-white/10 bg-[#121212] p-12 text-center">
+        {/* Contenu du tableau ou état vide */}
+        {filteredPayments.length === 0 ? (
+          <div className="p-12 text-center">
           <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-xs font-black text-white/40">
             PAY
           </span>
@@ -297,7 +301,6 @@ export default function GymPaymentsTab({
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#121212]">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -367,8 +370,8 @@ export default function GymPaymentsTab({
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ── MODAL NOUVEAU PAIEMENT ─────────────────────────────────── */}
       {isModalOpen && (

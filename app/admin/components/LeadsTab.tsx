@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Lead } from "@/lib/leads-store";
+import { buildWhatsAppLink } from "@/lib/whatsapp";
 
 interface LeadsTabProps {
   leads: Lead[];
@@ -38,113 +39,106 @@ export default function LeadsTab({
   });
 
   return (
-    <div className="mt-8 space-y-6">
+    <div className="mt-6 space-y-4">
       {/* KPI Summary Cards */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div className="rounded-2xl border border-white/10 bg-[#121212] p-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        <div className="rounded-2xl border border-white/10 bg-[#121212] p-4 sm:p-5">
           <p className="text-[11px] font-bold uppercase tracking-wider text-white/40">Total Demandes</p>
-          <p className="mt-2 text-3xl font-black text-white">{leads.length}</p>
+          <p className="mt-1 text-2xl font-black text-white sm:text-3xl">{leads.length}</p>
         </div>
-        <div className="rounded-2xl border border-lime-400/30 bg-lime-400/5 p-5">
+        <div className="rounded-2xl border border-lime-400/30 bg-lime-400/5 p-4 sm:p-5">
           <p className="text-[11px] font-bold uppercase tracking-wider text-lime-400">À Contacter</p>
-          <p className="mt-2 text-3xl font-black text-lime-400">
+          <p className="mt-1 text-2xl font-black text-lime-400 sm:text-3xl">
             {leads.filter((l) => l.status === "nouveau").length}
           </p>
         </div>
-        <div className="rounded-2xl border border-cyan-400/30 bg-cyan-400/5 p-5">
+        <div className="rounded-2xl border border-cyan-400/30 bg-cyan-400/5 p-4 sm:p-5">
           <p className="text-[11px] font-bold uppercase tracking-wider text-cyan-400">Contactés</p>
-          <p className="mt-2 text-3xl font-black text-cyan-400">
+          <p className="mt-1 text-2xl font-black text-cyan-400 sm:text-3xl">
             {leads.filter((l) => l.status === "contacté").length}
           </p>
         </div>
-        <div className="rounded-2xl border border-emerald-400/30 bg-emerald-400/5 p-5">
+        <div className="rounded-2xl border border-emerald-400/30 bg-emerald-400/5 p-4 sm:p-5">
           <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">Inscrits</p>
-          <p className="mt-2 text-3xl font-black text-emerald-400">
+          <p className="mt-1 text-2xl font-black text-emerald-400 sm:text-3xl">
             {leads.filter((l) => l.status === "inscrit").length}
           </p>
         </div>
       </div>
 
-      {/* Filter & Action Bar */}
-      <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-[#121212] p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 flex-wrap items-center gap-3">
-          <input
-            type="text"
-            placeholder="Rechercher par nom, téléphone ou mot-clé..."
-            value={searchLead}
-            onChange={(e) => setSearchLead(e.target.value)}
-            className="w-full sm:w-72 rounded-xl border border-white/10 bg-black/50 px-4 py-2.5 text-xs text-white placeholder-white/30 focus:border-lime-400 focus:outline-none"
-          />
+      {/* Unified Leads Card: Filters + Table */}
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#121212]">
+        {/* Toolbar Header */}
+        <div className="flex flex-col gap-3 border-b border-white/10 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div className="flex flex-1 flex-wrap items-center gap-2.5">
+            <input
+              type="text"
+              placeholder="Rechercher par nom, tél..."
+              value={searchLead}
+              onChange={(e) => setSearchLead(e.target.value)}
+              className="w-full sm:w-64 rounded-xl border border-white/10 bg-black/50 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:border-lime-400 focus:outline-none"
+            />
 
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-white/10 bg-black/50 px-3 py-2.5 text-xs text-white focus:border-lime-400 focus:outline-none"
-          >
-            <option value="all">Tous les statuts</option>
-            <option value="nouveau">Nouveaux</option>
-            <option value="contacté">Contactés</option>
-            <option value="inscrit">Inscrits</option>
-            <option value="archivé">Archivés</option>
-          </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-xs text-white focus:border-lime-400 focus:outline-none"
+            >
+              <option value="all">Tous les statuts</option>
+              <option value="nouveau">Nouveaux</option>
+              <option value="contacté">Contactés</option>
+              <option value="inscrit">Inscrits</option>
+              <option value="archivé">Archivés</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={onRefresh}
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:border-lime-400 hover:text-lime-400 transition"
+              title="Actualiser la liste"
+            >
+              ↻ Actualiser
+            </button>
+            <button
+              onClick={onExportCSV}
+              className="rounded-xl bg-lime-400 px-3.5 py-2 text-xs font-black uppercase tracking-wider text-black hover:bg-lime-300 transition shadow-md shadow-lime-400/10"
+            >
+              ⬇ CSV
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onRefresh}
-            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-xs font-bold text-white hover:border-lime-400 hover:text-lime-400 transition"
-            title="Actualiser la liste"
-          >
-            ↻ Actualiser
-          </button>
-          <button
-            onClick={onExportCSV}
-            className="rounded-xl bg-lime-400 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-black hover:bg-lime-300 transition shadow-md shadow-lime-400/10"
-          >
-            ⬇ Exporter CSV
-          </button>
-        </div>
-      </div>
-
-      {/* Leads Table / List */}
-      {filteredLeads.length === 0 ? (
-        <div className="rounded-3xl border border-white/10 bg-[#121212] p-12 text-center">
-          <p className="text-3xl">📭</p>
-          <h3 className="mt-3 text-lg font-bold text-white">Aucune demande trouvée</h3>
-          <p className="mt-1 text-xs text-white/50">
-            {searchLead || statusFilter !== "all"
-              ? "Aucun résultat ne correspond à votre filtre de recherche."
-              : "Les personnes qui remplissent le formulaire sur le site apparaîtront ici."}
-          </p>
-        </div>
-      ) : (
-        <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#121212]">
+        {/* Leads Table / List */}
+        {filteredLeads.length === 0 ? (
+          <div className="p-10 text-center">
+            <p className="text-3xl">📭</p>
+            <h3 className="mt-2 text-sm font-bold text-white">Aucune demande trouvée</h3>
+            <p className="mt-1 text-xs text-white/50">
+              {searchLead || statusFilter !== "all"
+                ? "Aucun résultat ne correspond à votre filtre de recherche."
+                : "Les personnes qui remplissent le formulaire sur le site apparaîtront ici."}
+            </p>
+          </div>
+        ) : (
           <div className="divide-y divide-white/5">
             {filteredLeads.map((lead) => {
-              const cleanPhone = lead.phone.replace(/[^0-9+]/g, "");
-              const whatsappNumber = cleanPhone.startsWith("+")
-                ? cleanPhone.substring(1)
-                : cleanPhone.startsWith("00")
-                ? cleanPhone.substring(2)
-                : cleanPhone.startsWith("7")
-                ? `221${cleanPhone}`
-                : cleanPhone;
-
-              const whatsappMsg = encodeURIComponent(
+              const whatsappUrl = buildWhatsAppLink(
+                lead.phone,
                 `Bonjour ${lead.name}, c'est l'équipe SAMBAFITNESS de Ndioum suite à votre demande sur notre site. Quand seriez-vous disponible pour finaliser votre inscription ?`
               );
 
               return (
                 <div
                   key={lead.id}
-                  className="flex flex-col gap-4 p-5 transition hover:bg-white/[0.02] sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 p-4 transition hover:bg-white/[0.02] sm:flex-row sm:items-center sm:justify-between sm:p-5"
                 >
                   {/* Info Prospect */}
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="text-base font-black text-white">{lead.name}</h4>
+                      <h4 className="text-sm font-black text-white">{lead.name}</h4>
                       <span
-                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${
                           lead.status === "nouveau"
                             ? "bg-lime-400/10 text-lime-400 border border-lime-400/30"
                             : lead.status === "contacté"
@@ -166,7 +160,7 @@ export default function LeadsTab({
                       </span>
                     </div>
 
-                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                    <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs">
                       <span className="font-mono font-bold text-white/90">{lead.phone}</span>
                       <span className="text-white/30">•</span>
                       <span className="text-white/60">{lead.club}</span>
@@ -183,17 +177,17 @@ export default function LeadsTab({
                   <div className="flex flex-wrap items-center gap-2">
                     <a
                       href={`tel:${lead.phone}`}
-                      className="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:border-lime-400 hover:text-lime-400 transition"
+                      className="rounded-xl border border-white/15 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-white hover:border-lime-400 hover:text-lime-400 transition"
                       title="Appeler directement"
                     >
                       📞 Appeler
                     </a>
 
                     <a
-                      href={`https://wa.me/${whatsappNumber}?text=${whatsappMsg}`}
+                      href={whatsappUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="rounded-xl bg-[#25D366] px-3.5 py-2 text-xs font-black uppercase tracking-wider text-white hover:bg-[#20ba59] transition"
+                      className="rounded-xl bg-[#25D366] px-3 py-1.5 text-xs font-black uppercase tracking-wider text-white hover:bg-[#20ba59] transition"
                       title="Ouvrir WhatsApp avec un message pré-rempli"
                     >
                       WhatsApp
@@ -202,7 +196,7 @@ export default function LeadsTab({
                     {lead.status !== "inscrit" && (
                       <button
                         onClick={() => onStartConvertLead(lead)}
-                        className="rounded-xl border border-lime-400/40 bg-lime-400/10 px-3 py-2 text-xs font-black uppercase tracking-wider text-lime-400 hover:bg-lime-400 hover:text-black transition"
+                        className="rounded-xl border border-lime-400/40 bg-lime-400/10 px-2.5 py-1.5 text-xs font-black uppercase tracking-wider text-lime-400 hover:bg-lime-400 hover:text-black transition"
                         title="Convertir ce prospect en membre adhérent"
                       >
                         + Membre
@@ -215,7 +209,7 @@ export default function LeadsTab({
                       onChange={(e) =>
                         onUpdateStatus(lead.id, e.target.value as Lead["status"])
                       }
-                      className="rounded-xl border border-white/15 bg-black/70 px-3 py-2 text-xs font-bold text-white focus:border-lime-400 focus:outline-none"
+                      className="rounded-xl border border-white/15 bg-black/70 px-2.5 py-1.5 text-xs font-bold text-white focus:border-lime-400 focus:outline-none"
                     >
                       <option value="nouveau">Nouveau</option>
                       <option value="contacté">Contacté</option>
@@ -227,7 +221,7 @@ export default function LeadsTab({
                       <button
                         disabled={isPending}
                         onClick={() => onDeleteLead(lead.id, lead.name)}
-                        className="rounded-xl border border-red-500/20 bg-red-500/5 px-2.5 py-2 text-xs font-bold text-red-400 hover:bg-red-500 hover:text-white transition"
+                        className="rounded-xl border border-red-500/20 bg-red-500/5 px-2 py-1.5 text-xs font-bold text-red-400 hover:bg-red-500 hover:text-white transition"
                         title="Supprimer la demande"
                       >
                         Supprimer
@@ -238,8 +232,8 @@ export default function LeadsTab({
               );
             })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

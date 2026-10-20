@@ -38,4 +38,7 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# github workflows (requires specific PAT scope)
+.github/
 next-env.d.ts

@@ -60,3 +60,13 @@ export function buildWhatsAppReminderUrl(
 
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }
+
+/**
+ * Construit un lien wa.me générique avec un message quelconque.
+ */
+export function buildWhatsAppLink(phone: string, text: string): string {
+  const cleanPhone = formatSenegalPhoneForWhatsApp(phone);
+  if (!cleanPhone) return "#";
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+}
+

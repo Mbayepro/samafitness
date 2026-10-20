@@ -98,31 +98,32 @@ export default function StaffTab({ currentAdminEmail, showFeedback }: StaffTabPr
 
   return (
     <div className="space-y-6">
-      {/* En-tête de section */}
-      <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-[#121212] p-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-lg font-black uppercase text-white flex items-center gap-2">
-            <span>Gestion de l&apos;Équipe & Comptes Gérants</span>
-          </h2>
-          <p className="mt-1 text-xs text-white/50">
-            Créez et administrez les accès pour les gérants et réceptionnistes de la salle de Ndioum.
-          </p>
+      {/* Conteneur unifié Équipe */}
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#121212]">
+        {/* En-tête / Barre d'action */}
+        <div className="flex flex-col gap-3 border-b border-white/10 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div>
+            <h2 className="text-sm font-black uppercase text-white tracking-wide">
+              Gestion de l&apos;Équipe & Comptes Gérants
+            </h2>
+            <p className="mt-0.5 text-xs text-white/50">
+              Créez et administrez les accès pour les gérants et réceptionnistes de la salle de Ndioum.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              generatePassword();
+              setIsModalOpen(true);
+            }}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-lime-400 px-4 py-2 text-xs font-black uppercase tracking-wider text-black shadow-md shadow-lime-400/20 transition hover:bg-lime-300"
+          >
+            <span>+ Créer un compte</span>
+          </button>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            generatePassword();
-            setIsModalOpen(true);
-          }}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-lime-400 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-black shadow-lg shadow-lime-400/20 transition hover:bg-lime-300 active:scale-95"
-        >
-          <span>+ Créer un compte Gérant</span>
-        </button>
-      </div>
-
-      {/* Liste des comptes */}
-      <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#121212]">
+        {/* Liste des comptes */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
