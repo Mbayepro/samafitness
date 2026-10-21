@@ -21,6 +21,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://sambafitness.vercel.app"
+  ),
   title: "SAMBAFITNESS | Salle de sport à Ndioum, Sénégal",
   description:
     "SAMBAFITNESS, salle de sport à Ndioum sur la route nationale, en face de la mairie : musculation, cardio, cross-training, boxe et cours collectifs. Rejoignez-nous ! Tél : +221 78 957 35 53.",
@@ -52,10 +55,10 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1200&h=630&q=80",
+        url: "/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "SAMBAFITNESS - Salle de sport à Ndioum",
+        alt: "SAMBA FITNESS - Salle de sport & Bien-être à Ndioum",
       },
     ],
   },
@@ -64,9 +67,7 @@ export const metadata: Metadata = {
     title: "SAMBAFITNESS | Salle de sport à Ndioum",
     description:
       "Musculation, cardio, cross-training, boxe et cours collectifs à Ndioum. Rejoignez-nous !",
-    images: [
-      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1200&h=630&q=80",
-    ],
+    images: ["/og-image.jpg"],
   },
 };
 
