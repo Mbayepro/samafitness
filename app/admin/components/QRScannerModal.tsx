@@ -1,86 +1,82 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import type { Member } from "@/lib/gym-store";
+import { X, Check, AlertTriangle, CreditCard, Camera, ScanLine } from "lucide-react";
 import { logger } from "@/lib/logger";
+import { formatMemberNumber } from "./ui/AdminFormatters";
+import { checkInByQrTokenAction } from "@/app/actions/gym-actions";
 
 interface QRScannerModalProps {
-  members: Member[];
-  onCheckInMember: (memberId: string) => Promise<void>;
   onClose: () => void;
-  showFeedback: (type: "success" | "error", text: string) => void;
+  showFeedback?: (type: "success" | "error", text: string) => void;
+  onOpenPaymentModal?: (memberId?: string) => void;
+  onAttendanceRecorded?: () => void;
+  // Optionnel pour rétro-compatibilité des props existantes
+  members?: unknown[];
+  onCheckInMember?: (memberId: string) => Promise<void>;
 }
 
+type ScanStatus =
+  | { type: "idle" }
+  | { type: "processing" }
+  | {
+      type: "success";
+      memberName: string;
+      memberNumber?: number | null;
+      planId?: string;
+      message: string;
+    }
+  | {
+      type: "expired";
+      memberId?: string;
+      memberName?: string;
+      error: string;
+    }
+  | {
+      type: "duplicate";
+      memberName?: string;
+      error: string;
+    }
+  | {
+      type: "error";
+      error: string;
+    };
+
 export default function QRScannerModal({
-  members,
-  onCheckInMember,
   onClose,
   showFeedback,
+  onOpenPaymentModal,
+  onAttendanceRecorded,
 }: QRScannerModalProps) {
   const [manualCode, setManualCode] = useState("");
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [scannedMember, setScannedMember] = useState<Member | null>(null);
-  const [processing, setProcessing] = useState(false);
+  const [scanStatus, setScanStatus] = useState<ScanStatus>({ type: "idle" });
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const scanIntervalRef = useRef<number | null>(null);
+  const isProcessingRef = useRef<boolean>(false);
 
-  const findMemberFromRaw = useCallback((raw: string): Member | null => {
-    const trimmed = raw.trim();
-    if (!trimmed) return null;
-
-    // Try parsing JSON payload
+  // Émission d'un bip sonore de confirmation
+  const playBeep = useCallback((success = true) => {
     try {
-      const parsed = JSON.parse(trimmed);
-      if (parsed.id) {
-        const found = members.find((m) => m.id === parsed.id);
-        if (found) return found;
-      }
-      if (parsed.phone) {
-        const clean = parsed.phone.replace(/[^0-9]/g, "");
-        const found = members.find((m) => m.phone.replace(/[^0-9]/g, "").includes(clean));
-        if (found) return found;
-      }
-    } catch {
-      // not JSON
-    }
-
-    // Direct ID match
-    const byId = members.find((m) => m.id === trimmed || m.qr_token === trimmed);
-    if (byId) return byId;
-
-    // Phone match
-    const cleanRaw = trimmed.replace(/[^0-9]/g, "");
-    if (cleanRaw.length >= 7) {
-      const byPhone = members.find((m) => m.phone.replace(/[^0-9]/g, "").includes(cleanRaw));
-      if (byPhone) return byPhone;
-    }
-
-    // Name match
-    const byName = members.find(
-      (m) => m.full_name.toLowerCase() === trimmed.toLowerCase()
-    );
-    return byName || null;
-  }, [members]);
-
-  const handleRecognized = useCallback((member: Member) => {
-    setScannedMember(member);
-    // Beep sound effect using AudioContext
-    try {
-      const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
+
       osc.type = "sine";
-      osc.frequency.setValueAtTime(880, ctx.currentTime);
-      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      osc.frequency.setValueAtTime(success ? 880 : 330, ctx.currentTime);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
-      osc.stop(ctx.currentTime + 0.12);
+      osc.stop(ctx.currentTime + (success ? 0.15 : 0.3));
     } catch {
-      // AudioContext unavailable or blocked
+      // Audio bloqué ou non supporté
     }
   }, []);
 
@@ -96,12 +92,77 @@ export default function QRScannerModal({
     setCameraActive(false);
   }, []);
 
-  // BarcodeDetector or Canvas Scanner loop
+  // Traitement direct du jeton auprès du serveur (seule source de vérité)
+  const processRawToken = useCallback(
+    async (raw: string) => {
+      const trimmed = (raw || "").trim();
+      if (!trimmed || isProcessingRef.current) return;
+
+      isProcessingRef.current = true;
+      stopCamera();
+      setScanStatus({ type: "processing" });
+
+      try {
+        const res = await checkInByQrTokenAction(trimmed);
+
+        if (res.success) {
+          playBeep(true);
+          setScanStatus({
+            type: "success",
+            memberName: res.memberName,
+            memberNumber: res.member.member_number,
+            planId: res.member.plan_id,
+            message: res.message,
+          });
+          showFeedback?.("success", res.message);
+          onAttendanceRecorded?.();
+        } else {
+          playBeep(false);
+          if (res.isExpired) {
+            setScanStatus({
+              type: "expired",
+              memberId: res.memberId,
+              memberName: res.memberName,
+              error: res.error,
+            });
+          } else if (res.isDuplicate) {
+            setScanStatus({
+              type: "duplicate",
+              memberName: res.memberName,
+              error: res.error,
+            });
+          } else {
+            setScanStatus({
+              type: "error",
+              error: res.error || "Jeton QR non reconnu ou invalide.",
+            });
+          }
+        }
+      } catch {
+        playBeep(false);
+        setScanStatus({
+          type: "error",
+          error: "Erreur de communication avec le serveur lors du pointage.",
+        });
+      } finally {
+        isProcessingRef.current = false;
+      }
+    },
+    [onAttendanceRecorded, playBeep, showFeedback, stopCamera]
+  );
+
+  // Démarrage de la caméra avec détection native de codes-barres
   const startCamera = async () => {
     setCameraError(null);
+    setScanStatus({ type: "idle" });
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } },
+        video: {
+          facingMode: "environment",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
       });
       streamRef.current = stream;
       if (videoRef.current) {
@@ -109,33 +170,37 @@ export default function QRScannerModal({
         await videoRef.current.play();
         setCameraActive(true);
 
-        // Check if native BarcodeDetector API exists
+        // API native BarcodeDetector
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const win = window as any;
         if ("BarcodeDetector" in win) {
-          const detector = new win.BarcodeDetector({ formats: ["qr_code", "ean_13", "code_128"] });
+          const detector = new win.BarcodeDetector({ formats: ["qr_code"] });
           scanIntervalRef.current = window.setInterval(async () => {
-            if (!videoRef.current || videoRef.current.readyState < 2) return;
+            if (!videoRef.current || videoRef.current.readyState < 2 || isProcessingRef.current) {
+              return;
+            }
             try {
               const barcodes = await detector.detect(videoRef.current);
-              if (barcodes.length > 0) {
+              if (barcodes && barcodes.length > 0) {
                 const rawValue = barcodes[0].rawValue;
-                const match = findMemberFromRaw(rawValue);
-                if (match) {
-                  stopCamera();
-                  handleRecognized(match);
+                if (rawValue) {
+                  await processRawToken(rawValue);
                 }
               }
             } catch {
-              // detection frame error
+              // Frame de scan ignorée
             }
-          }, 300);
+          }, 250);
+        } else {
+          setCameraError(
+            "Votre navigateur ne supporte pas la détection automatique de QR en direct. Utilisez la saisie ou la douchette ci-dessous."
+          );
         }
       }
     } catch (err) {
-      logger.error({ err }, "Camera access error");
+      logger.error({ err }, "Erreur d'accès à la caméra pour le scan");
       setCameraError(
-        "Impossible d'accéder à la caméra. Vérifiez les autorisations du navigateur ou utilisez la saisie directe."
+        "Accès caméra refusé ou indisponible. Vérifiez les autorisations de votre navigateur."
       );
     }
   };
@@ -149,166 +214,220 @@ export default function QRScannerModal({
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualCode.trim()) return;
-    const match = findMemberFromRaw(manualCode);
-    if (match) {
-      handleRecognized(match);
-      setManualCode("");
-    } else {
-      showFeedback("error", `Aucun membre ne correspond au code : "${manualCode}"`);
-    }
+    const token = manualCode.trim();
+    setManualCode("");
+    processRawToken(token);
   };
 
-  const handleConfirmCheckIn = async () => {
-    if (!scannedMember) return;
-    setProcessing(true);
-    try {
-      await onCheckInMember(scannedMember.id);
-      if (scannedMember.status === "expire") {
-        showFeedback(
-          "error",
-          `Attention : l'abonnement de ${scannedMember.full_name} est expiré !`
-        );
-      } else {
-        showFeedback(
-          "success",
-          `Entrée validée pour ${scannedMember.full_name} !`
-        );
-      }
-      onClose();
-    } catch {
-      showFeedback("error", "Erreur lors de la validation du pointage.");
-    } finally {
-      setProcessing(false);
-    }
+  const handleResetScan = () => {
+    setScanStatus({ type: "idle" });
+    setManualCode("");
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-3xl border border-white/15 bg-[#121212] p-6 shadow-2xl">
+      <div className="w-full max-w-lg rounded-xl border border-white/15 bg-[#121214] p-5 shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+        <div className="flex items-center justify-between border-b border-white/10 pb-3">
           <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-lime-400/20 text-lime-400 font-black text-xs">
-              QR
+            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-lime-400/15 text-lime-400 font-bold text-xs">
+              <ScanLine size={15} />
             </span>
             <div>
-              <h3 className="text-base font-black uppercase text-white">
-                Scanner QR Code / Douchette
-              </h3>
+              <h3 className="text-sm font-bold text-white">Scanner d&apos;entrée QR & Douchette</h3>
               <p className="text-[11px] text-white/50">
-                Pointage automatique des présences à l&apos;entrée
+                Pointage sécurisé en direct • Contrôle serveur instantané
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={() => {
               stopCamera();
               onClose();
             }}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+            aria-label="Fermer"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-white/50 hover:bg-white/10 hover:text-white transition"
           >
-            ✕
+            <X size={16} strokeWidth={1.75} />
           </button>
         </div>
 
-        {/* Scanned Member Alert & Confirmation */}
-        {scannedMember ? (
-          <div className="mt-6 rounded-2xl border-2 border-lime-400 bg-lime-400/5 p-6 text-center animate-fade-in">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-lime-400 text-black font-black text-xl shadow-lg shadow-lime-400/30">
-              ✓
+        {/* ── ÉCRAN DE TRAITEMENT ─────────────────────────────────────────── */}
+        {scanStatus.type === "processing" && (
+          <div className="my-8 flex flex-col items-center justify-center text-center space-y-3">
+            <div className="h-9 w-9 animate-spin rounded-full border-2 border-lime-400 border-t-transparent" />
+            <p className="text-sm font-semibold text-white">Validation auprès du serveur...</p>
+            <p className="text-xs text-white/50">Vérification de l&apos;abonnement et anti-doublon</p>
+          </div>
+        )}
+
+        {/* ── CAS 1 : SUCCÈS VALIDATION ENTRÉE ────────────────────────────── */}
+        {scanStatus.type === "success" && (
+          <div className="mt-5 rounded-lg border border-lime-400/40 bg-lime-400/10 p-5 text-center animate-fade-in">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md bg-lime-400 text-black">
+              <Check size={24} strokeWidth={2.5} />
             </div>
             <p className="mt-3 text-[11px] font-bold uppercase tracking-wider text-lime-400">
-              Membre Identifié
+              Pointage validé
             </p>
-            <h4 className="mt-1 text-2xl font-black text-white">
-              {scannedMember.full_name}
-            </h4>
-            <p className="font-mono text-xs text-white/60">{scannedMember.phone}</p>
-
-            <div className="mt-4 flex items-center justify-center gap-3">
-              <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold uppercase text-white/90">
-                {scannedMember.plan_id}
+            <h4 className="mt-1 text-xl font-bold text-white">{scanStatus.memberName}</h4>
+            <div className="mt-2 flex items-center justify-center gap-2">
+              <span className="font-mono text-xs text-lime-300 font-semibold rounded border border-lime-400/30 bg-lime-400/10 px-2 py-0.5">
+                {formatMemberNumber(scanStatus.memberNumber)}
               </span>
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider ${
-                  scannedMember.status === "actif"
-                    ? "bg-lime-400/20 text-lime-400 border border-lime-400/40"
-                    : scannedMember.status === "expire_bientot"
-                    ? "bg-amber-400/20 text-amber-300 border border-amber-400/40"
-                    : "bg-red-500/20 text-red-400 border border-red-500/40"
-                }`}
-              >
-                {scannedMember.status === "actif"
-                  ? "Actif"
-                  : scannedMember.status === "expire_bientot"
-                  ? "Expire bientôt"
-                  : "Expiré"}
+              <span className="text-xs uppercase text-white/70 font-medium">
+                {scanStatus.planId}
               </span>
             </div>
+            <p className="mt-3 text-xs text-lime-200/90">{scanStatus.message}</p>
 
-            <p className="mt-2 text-xs text-white/60">
-              Abonnement valide jusqu&apos;au {new Date(scannedMember.end_date).toLocaleDateString("fr-FR")}
-            </p>
-
-            <div className="mt-6 flex items-center gap-3">
+            <div className="mt-5 flex items-center gap-2.5">
               <button
                 type="button"
-                onClick={() => setScannedMember(null)}
-                className="flex-1 rounded-xl border border-white/10 bg-white/5 py-3 text-xs font-bold text-white hover:bg-white/10 transition"
+                onClick={handleResetScan}
+                className="flex-1 rounded-md border border-white/15 bg-white/5 py-2.5 text-xs font-semibold text-white hover:bg-white/10 transition"
               >
-                Annuler
+                Scanner un autre membre
               </button>
               <button
                 type="button"
-                onClick={handleConfirmCheckIn}
-                disabled={processing}
-                className="flex-1 rounded-xl bg-lime-400 py-3 text-xs font-black uppercase tracking-wider text-black shadow-lg shadow-lime-400/20 hover:bg-lime-300 transition"
+                onClick={onClose}
+                className="flex-1 rounded-md bg-lime-400 py-2.5 text-xs font-bold text-black hover:bg-lime-300 transition"
               >
-                {processing ? "Validation..." : "Valider l'entrée →"}
+                Terminer
               </button>
             </div>
           </div>
-        ) : (
-          <div className="mt-6 space-y-6">
-            {/* Camera View Area */}
-            <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-black">
+        )}
+
+        {/* ── CAS 2 : REFUS STRICT ABONNEMENT EXPIRÉ ──────────────────────── */}
+        {scanStatus.type === "expired" && (
+          <div className="mt-5 rounded-lg border border-red-500/40 bg-red-500/10 p-5 text-center animate-fade-in">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md bg-red-500 text-white">
+              <AlertTriangle size={24} strokeWidth={2.5} />
+            </div>
+            <p className="mt-3 text-[11px] font-bold uppercase tracking-wider text-red-400">
+              Accès refusé
+            </p>
+            <h4 className="mt-1 text-lg font-bold text-white">
+              {scanStatus.memberName || "Abonnement expiré"}
+            </h4>
+            <div className="mt-3 rounded-md border border-red-500/25 bg-red-950/40 p-3 text-xs text-red-200">
+              {scanStatus.error}
+            </div>
+
+            <div className="mt-5 flex flex-col sm:flex-row items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenPaymentModal?.(scanStatus.memberId);
+                }}
+                className="w-full sm:flex-1 flex items-center justify-center gap-2 rounded-md bg-emerald-500 py-2.5 text-xs font-bold text-white hover:bg-emerald-400 transition"
+              >
+                <CreditCard size={14} />
+                <span>Encaisser un paiement</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleResetScan}
+                className="w-full sm:w-auto rounded-md border border-white/15 bg-white/5 px-4 py-2.5 text-xs font-semibold text-white hover:bg-white/10 transition"
+              >
+                Scanner un autre
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── CAS 3 : DOUBLON DU JOUR CALENDAIRE (AFRICA/DAKAR) ────────────── */}
+        {scanStatus.type === "duplicate" && (
+          <div className="mt-5 rounded-lg border border-amber-500/40 bg-amber-500/10 p-5 text-center animate-fade-in">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md bg-amber-500 text-black">
+              <AlertTriangle size={24} strokeWidth={2.5} />
+            </div>
+            <p className="mt-3 text-[11px] font-bold uppercase tracking-wider text-amber-400">
+              Pointage déjà enregistré
+            </p>
+            <h4 className="mt-1 text-lg font-bold text-white">{scanStatus.memberName}</h4>
+            <div className="mt-3 rounded-md border border-amber-500/25 bg-amber-950/40 p-3 text-xs text-amber-200">
+              {scanStatus.error}
+            </div>
+            <div className="mt-5 flex items-center justify-center gap-2.5">
+              <button
+                type="button"
+                onClick={handleResetScan}
+                className="rounded-md border border-white/15 bg-white/5 px-5 py-2.5 text-xs font-semibold text-white hover:bg-white/10 transition"
+              >
+                Scanner un autre membre
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-md bg-white/10 px-5 py-2.5 text-xs font-semibold text-white hover:bg-white/20 transition"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── CAS 4 : ERREUR JETON INVALIDE ───────────────────────────────── */}
+        {scanStatus.type === "error" && (
+          <div className="mt-5 rounded-lg border border-red-500/40 bg-red-500/10 p-5 text-center animate-fade-in">
+            <p className="text-sm font-bold text-red-300">Échec du pointage</p>
+            <p className="mt-1 text-xs text-red-200/80">{scanStatus.error}</p>
+            <button
+              type="button"
+              onClick={handleResetScan}
+              className="mt-4 rounded-md border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold text-white hover:bg-white/10"
+            >
+              Réessayer
+            </button>
+          </div>
+        )}
+
+        {/* ── MODE SCAN NORMAL (Caméra + Saisie Douchette) ────────────────── */}
+        {scanStatus.type === "idle" && (
+          <div className="mt-4 space-y-4">
+            {/* Zone Vidéo Caméra */}
+            <div className="relative overflow-hidden rounded-lg border border-white/10 bg-black aspect-video w-full flex items-center justify-center">
               {cameraActive ? (
-                <div className="relative aspect-video w-full">
+                <>
                   <video
                     ref={videoRef}
                     playsInline
                     muted
                     className="h-full w-full object-cover"
                   />
-                  {/* Scan target reticle overlay */}
+                  {/* Viseur de scan sobre */}
                   <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                    <div className="h-44 w-44 rounded-2xl border-2 border-dashed border-lime-400/80 bg-lime-400/5 animate-pulse" />
+                    <div className="h-44 w-44 rounded-lg border-2 border-lime-400/80 bg-lime-400/5" />
                   </div>
                   <button
+                    type="button"
                     onClick={stopCamera}
-                    className="absolute bottom-3 right-3 rounded-xl bg-red-600/80 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur-md hover:bg-red-600"
+                    className="absolute bottom-2.5 right-2.5 rounded-md bg-red-600/90 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm hover:bg-red-600"
                   >
                     Arrêter la caméra
                   </button>
-                </div>
+                </>
               ) : (
-                <div className="flex flex-col items-center justify-center p-8 text-center">
-                  <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-xs font-black text-lime-400">
-                    SCAN
-                  </span>
-                  <p className="mt-3 text-sm font-bold text-white">
-                    Scanner avec la caméra
-                  </p>
-                  <p className="mt-1 text-xs text-white/50 max-w-xs">
-                    Présentez le badge ou le téléphone du membre devant l&apos;objectif.
+                <div className="flex flex-col items-center justify-center p-6 text-center space-y-2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-md bg-white/5 text-lime-400">
+                    <Camera size={20} />
+                  </div>
+                  <p className="text-xs font-semibold text-white">Scanner avec la caméra</p>
+                  <p className="text-[11px] text-white/50 max-w-xs">
+                    Présentez la carte ou le téléphone du membre devant l&apos;objectif.
                   </p>
                   {cameraError && (
-                    <p className="mt-2 text-xs text-red-400">{cameraError}</p>
+                    <p className="text-xs text-amber-300 max-w-xs mt-1">{cameraError}</p>
                   )}
                   <button
                     type="button"
                     onClick={startCamera}
-                    className="mt-4 rounded-xl bg-lime-400 px-6 py-2.5 text-xs font-black uppercase tracking-wider text-black shadow-md shadow-lime-400/20 hover:bg-lime-300 transition"
+                    className="mt-2 rounded-md bg-lime-400 px-4 py-2 text-xs font-bold text-black hover:bg-lime-300 transition"
                   >
                     Activer la caméra
                   </button>
@@ -316,23 +435,24 @@ export default function QRScannerModal({
               )}
             </div>
 
-            {/* Manual Saisie / Douchette Barcode Reader Input */}
-            <form onSubmit={handleManualSubmit} className="space-y-3">
-              <label className="block text-xs font-bold uppercase tracking-wider text-white/70">
-                Ou scanner par douchette / saisie rapide :
+            {/* Saisie directe par douchette ou jeton */}
+            <form onSubmit={handleManualSubmit} className="space-y-2">
+              <label className="block text-xs font-semibold text-white/70">
+                Ou scanner par douchette / saisie du jeton :
               </label>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
-                  placeholder="Tapez le numéro de téléphone ou ID..."
+                  placeholder="Scannez ou collez le jeton (ex. sfc_...)"
                   value={manualCode}
                   onChange={(e) => setManualCode(e.target.value)}
                   autoFocus
-                  className="flex-1 rounded-xl border border-white/10 bg-black/60 px-4 py-3 text-xs text-white placeholder-white/30 focus:border-lime-400 focus:outline-none"
+                  className="flex-1 rounded-md border border-white/10 bg-black/50 px-3.5 py-2.5 text-xs font-mono text-white placeholder-white/30 focus:border-lime-400 focus:outline-none"
                 />
                 <button
                   type="submit"
-                  className="rounded-xl border border-lime-400/40 bg-lime-400/10 px-5 py-3 text-xs font-black uppercase text-lime-400 hover:bg-lime-400 hover:text-black transition"
+                  disabled={!manualCode.trim()}
+                  className="rounded-md border border-lime-400/30 bg-lime-400/10 px-4 py-2.5 text-xs font-semibold text-lime-400 hover:bg-lime-400 hover:text-black transition disabled:opacity-50"
                 >
                   Valider
                 </button>

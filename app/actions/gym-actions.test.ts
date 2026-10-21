@@ -46,4 +46,53 @@ describe("gym-actions", () => {
 
     expect(res.success).toBe(false);
   });
+
+  it("rejette le pointage par QR avec un jeton invalide ou introuvable", async () => {
+    vi.spyOn(adminAuth, "requireAdmin").mockResolvedValue({
+      email: "admin@sambafitness.sn",
+      role: "receptionist",
+      isDemo: false,
+    });
+
+    const { checkInByQrTokenAction } = await import("./gym-actions");
+    const res = await checkInByQrTokenAction("sfc_nonexistent_token_123456789");
+    expect(res.success).toBe(false);
+    if (!res.success) {
+      expect(res.error).toMatch(/non reconnu|introuvable/i);
+    }
+  });
+
+  it("rejette le pointage d'un membre expiré", async () => {
+    vi.spyOn(adminAuth, "requireAdmin").mockResolvedValue({
+      email: "admin@sambafitness.sn",
+      role: "receptionist",
+      isDemo: false,
+    });
+
+    const { checkInByQrTokenAction } = await import("./gym-actions");
+    // mem_demo_3 (Ousmane Kane) a pour token sfc_b2c3d4e5f6a17890123456789abcdef2 et est expiré
+    const res = await checkInByQrTokenAction("sfc_b2c3d4e5f6a17890123456789abcdef2");
+    expect(res.success).toBe(false);
+    if (!res.success) {
+      expect(res.isExpired).toBe(true);
+      expect(res.error).toMatch(/expiré/i);
+    }
+  });
+
+  it("régénère un nouveau jeton QR sécurisé de plus de 20 caractères", async () => {
+    vi.spyOn(adminAuth, "requireAdmin").mockResolvedValue({
+      email: "admin@sambafitness.sn",
+      role: "receptionist",
+      isDemo: false,
+    });
+
+    const { regenerateMemberQrTokenAction } = await import("./gym-actions");
+    const res = await regenerateMemberQrTokenAction("mem_demo_1");
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.member.qr_token).toBeDefined();
+      expect(res.member.qr_token?.startsWith("sfc_")).toBe(true);
+      expect((res.member.qr_token?.length || 0)).toBeGreaterThanOrEqual(20);
+    }
+  });
 });

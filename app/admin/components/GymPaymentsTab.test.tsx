@@ -83,7 +83,7 @@ describe("GymPaymentsTab", () => {
     // Basculer vers Sorties
     fireEvent.click(sortiesTab);
     expect(screen.getByText("Loyer local Ndioum")).toBeInTheDocument();
-    const addExpenseBtn = screen.getByText("+ Enregistrer une Dépense");
+    const addExpenseBtn = screen.getByText(/\+\s*Enregistrer une dépense/i);
     expect(addExpenseBtn).toBeInTheDocument();
 
     // Ouvrir la modale dépense

@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { CalendarCheck } from "lucide-react";
 import type { Attendance, Member } from "@/lib/gym-store";
 import QRScannerModal from "./QRScannerModal";
+import { formatAdminDate } from "./ui/AdminFormatters";
 
 interface GymAttendancesTabProps {
   attendances: Attendance[];
@@ -197,14 +199,14 @@ export default function GymAttendancesTab({
                   {selectedMember.status === "actif" ? "OK" : selectedMember.status === "expire_bientot" ? "ATTN" : "EXP"}
                 </span>
                 <div>
-                  <p className="text-xs font-black text-white">{selectedMember.full_name}</p>
+                  <p className="text-xs font-bold text-white">{selectedMember.full_name}</p>
                   <p className="text-[11px] opacity-90">
                     {selectedMember.status === "actif" &&
-                      `Abonnement en règle jusqu'au ${selectedMember.end_date}.`}
+                      `Abonnement en règle jusqu'au ${formatAdminDate(selectedMember.end_date)}.`}
                     {selectedMember.status === "expire_bientot" &&
-                      `Attention : l'abonnement expire le ${selectedMember.end_date} (sous 7 jours).`}
+                      `Attention : l'abonnement expire le ${formatAdminDate(selectedMember.end_date)} (sous 7 jours).`}
                     {selectedMember.status === "expire" &&
-                      `ABONNEMENT EXPIRÉ depuis le ${selectedMember.end_date} ! Encaissement requis.`}
+                      `ABONNEMENT EXPIRÉ depuis le ${formatAdminDate(selectedMember.end_date)} ! Encaissement requis.`}
                   </p>
                 </div>
               </div>
@@ -213,7 +215,7 @@ export default function GymAttendancesTab({
                 <button
                   type="button"
                   onClick={() => onOpenPaymentForMember(selectedMember)}
-                  className="rounded-lg bg-white px-3 py-1.5 text-xs font-black uppercase text-black hover:bg-gray-100 transition"
+                  className="rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-black hover:bg-gray-100 transition"
                 >
                   Renouveler maintenant
                 </button>
@@ -275,10 +277,10 @@ export default function GymAttendancesTab({
         {/* Contenu du tableau ou état vide */}
         {filteredAttendances.length === 0 ? (
           <div className="p-12 text-center">
-            <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-xs font-black text-white/40">
-              PRÉ
-            </span>
-            <h3 className="mt-3 text-lg font-bold text-white">Aucun passage enregistré</h3>
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-[6px] border border-white/5 bg-white/[0.02] text-zinc-400">
+              <CalendarCheck size={18} strokeWidth={1.75} />
+            </div>
+            <h3 className="mt-3 text-sm font-medium text-white">Aucun passage enregistré</h3>
             <p className="mt-1 text-xs text-white/50">
               {dateFilter === "today"
                 ? "Aucune entrée enregistrée pour le moment aujourd'hui."
@@ -289,12 +291,12 @@ export default function GymAttendancesTab({
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-white/10 bg-black/40 text-[10px] font-black uppercase tracking-wider text-white/50">
-                  <th className="py-4 px-6">Adhérent</th>
-                  <th className="py-4 px-4">Date & Heure</th>
-                  <th className="py-4 px-4">Méthode</th>
-                  <th className="py-4 px-4">Enregistré par</th>
-                  <th className="py-4 px-6 text-right">Statut Abonnement</th>
+                <tr className="border-b border-white/10 bg-black/40 text-xs font-semibold text-white/60">
+                  <th className="py-3 px-6">Adhérent</th>
+                  <th className="py-3 px-4">Date & heure</th>
+                  <th className="py-3 px-4">Méthode</th>
+                  <th className="py-3 px-4">Enregistré par</th>
+                  <th className="py-3 px-6 text-right">Statut abonnement</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-xs">
@@ -314,7 +316,7 @@ export default function GymAttendancesTab({
                       </td>
                       <td className="py-4 px-4">
                         <span className="font-mono text-white/80">
-                          {checkDate.toLocaleDateString("fr-FR")} à{" "}
+                          {formatAdminDate(checkDate)} à{" "}
                           <strong className="text-white">
                             {checkDate.toLocaleTimeString("fr-FR", {
                               hour: "2-digit",
@@ -331,9 +333,9 @@ export default function GymAttendancesTab({
                       <td className="py-4 px-4 text-white/60 text-[11px]">
                         {att.recorded_by || "Admin"}
                       </td>
-                      <td className="py-4 px-6 text-right">
+                      <td className="py-3.5 px-6 text-right">
                         <span
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+                          className={`inline-flex rounded-md px-2 py-0.5 text-[11px] font-medium ${
                             isExpired
                               ? "bg-red-400/10 text-red-400 border border-red-400/30"
                               : "bg-lime-400/10 text-lime-400 border border-lime-400/30"
@@ -354,10 +356,12 @@ export default function GymAttendancesTab({
       {/* QR Code Scanner / Camera / Douchette Modal */}
       {isScannerOpen && (
         <QRScannerModal
-          members={members}
-          onCheckInMember={onRecordAttendance}
           onClose={() => setIsScannerOpen(false)}
           showFeedback={showFeedback}
+          onOpenPaymentModal={(memberId) => {
+            const found = members.find((m) => m.id === memberId);
+            if (found) onOpenPaymentForMember(found);
+          }}
         />
       )}
     </div>

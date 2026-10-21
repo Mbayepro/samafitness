@@ -188,8 +188,11 @@ create policy "Seul le super-admin peut modifier le contenu"
 -- ==============================================================================
 -- 5. MODULE GESTION DE SALLE : TABLE DES MEMBRES (MEMBERS)
 -- ==============================================================================
+create sequence if not exists public.member_number_seq start with 1 increment by 1;
+
 create table if not exists public.members (
     id text primary key default ('mem_' || extract(epoch from now())::bigint || '_' || substr(md5(random()::text), 1, 6)),
+    member_number integer unique not null default nextval('public.member_number_seq'),
     full_name text not null,
     phone text not null,
     plan_id text not null,
@@ -197,7 +200,7 @@ create table if not exists public.members (
     end_date date not null,
     status text not null default 'actif' check (status in ('actif', 'expire_bientot', 'expire')),
     notes text,
-    qr_token text unique default encode(gen_random_bytes(16), 'hex'),
+    qr_token text unique not null default ('sfc_' || replace(gen_random_uuid()::text, '-', '')),
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
 );
@@ -295,6 +298,7 @@ create table if not exists public.attendances (
 
 create index if not exists idx_attendances_member_id on public.attendances (member_id);
 create index if not exists idx_attendances_checked_in_at on public.attendances (checked_in_at desc);
+create unique index if not exists uq_attendances_member_dakar_day on public.attendances (member_id, ((checked_in_at at time zone 'Africa/Dakar')::date));
 
 alter table public.attendances enable row level security;
 

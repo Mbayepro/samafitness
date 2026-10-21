@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { Users, Globe } from "lucide-react";
 import type { SiteContentType } from "@/lib/content-store";
 import type { FeedbackKind } from "@/app/admin/admin-types";
 import StaffTab from "./StaffTab";
@@ -42,24 +43,26 @@ export default function SettingsTab({
         <button
           type="button"
           onClick={() => setSubSection("staff")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition ${
+          className={`flex items-center gap-2 rounded-[8px] px-4 py-2 text-xs font-medium transition min-h-[40px] ${
             subSection === "staff"
-              ? "bg-white text-black shadow-md"
+              ? "bg-white text-black font-semibold"
               : "border border-white/10 bg-white/5 text-white/70 hover:border-white/30 hover:text-white"
           }`}
         >
-          <span>👥 Équipe & Gérants</span>
+          <Users size={16} strokeWidth={1.75} />
+          <span>Équipe & Gérants</span>
         </button>
         <button
           type="button"
           onClick={() => setSubSection("site")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition ${
+          className={`flex items-center gap-2 rounded-[8px] px-4 py-2 text-xs font-medium transition min-h-[40px] ${
             subSection === "site"
-              ? "bg-white text-black shadow-md"
+              ? "bg-white text-black font-semibold"
               : "border border-white/10 bg-white/5 text-white/70 hover:border-white/30 hover:text-white"
           }`}
         >
-          <span>🌐 Réglages du Site</span>
+          <Globe size={16} strokeWidth={1.75} />
+          <span>Réglages du Site</span>
           <span
             className={`h-2 w-2 rounded-full ${
               supabaseConfigured ? "bg-emerald-400" : "bg-amber-400"

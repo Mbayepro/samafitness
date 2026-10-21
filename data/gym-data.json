@@ -2,6 +2,7 @@
   "members": [
     {
       "id": "mem_1792428612760_2b4vy",
+      "member_number": 5,
       "full_name": "mairame",
       "phone": "+221 770362616",
       "plan_id": "complete",
@@ -9,12 +10,13 @@
       "end_date": "2026-11-19",
       "status": "actif",
       "notes": null,
-      "qr_token": "qr_79q14pv2ge",
+      "qr_token": "sfc_1792428612760a1b2c3d4e5f60a1b2c3",
       "created_at": "2026-10-19T16:50:12.760Z",
       "updated_at": "2026-10-19T16:50:12.760Z"
     },
     {
       "id": "mem_demo_1",
+      "member_number": 4,
       "full_name": "Amadou Ba",
       "phone": "+221 76 345 67 89",
       "plan_id": "mensuel",
@@ -22,12 +24,13 @@
       "end_date": "2026-12-08",
       "status": "actif",
       "notes": "Inscrit après visite.",
-      "qr_token": "qr_token_amadou_ba",
+      "qr_token": "sfc_5db776c4ce8944ab806a7da0cc4a176a",
       "created_at": "2026-10-19T15:50:39.23988+00:00",
-      "updated_at": "2026-10-20T16:22:09.377Z"
+      "updated_at": "2026-10-21T13:33:31.159Z"
     },
     {
       "id": "mem_demo_2",
+      "member_number": 1,
       "full_name": "Awa Diallo",
       "phone": "+221 77 456 78 90",
       "plan_id": "trimestriel",
@@ -35,12 +38,13 @@
       "end_date": "2026-11-19",
       "status": "actif",
       "notes": "Cardio & Musculation après-midi",
-      "qr_token": "qr_awa_diallo",
+      "qr_token": "sfc_a1b2c3d4e5f67890123456789abcdef1",
       "created_at": "2026-07-26T16:49:08.034Z",
       "updated_at": "2026-10-19T16:57:46.053Z"
     },
     {
       "id": "mem_demo_3",
+      "member_number": 2,
       "full_name": "Ousmane Kane",
       "phone": "+221 78 567 89 01",
       "plan_id": "mensuel",
@@ -48,12 +52,13 @@
       "end_date": "2026-10-09",
       "status": "expire",
       "notes": "Relance Wave à effectuer",
-      "qr_token": "qr_ousmane_kane",
+      "qr_token": "sfc_b2c3d4e5f6a17890123456789abcdef2",
       "created_at": "2026-09-09T16:49:08.034Z",
       "updated_at": "2026-10-19T16:49:08.034Z"
     },
     {
       "id": "mem_demo_4",
+      "member_number": 3,
       "full_name": "Marieme Sy",
       "phone": "+221 77 678 90 12",
       "plan_id": "annuel",
@@ -61,7 +66,7 @@
       "end_date": "2027-09-14",
       "status": "actif",
       "notes": "Membre très assidue le matin",
-      "qr_token": "qr_marieme_sy",
+      "qr_token": "sfc_c3d4e5f6a1b27890123456789abcdef3",
       "created_at": "2026-09-19T16:49:08.034Z",
       "updated_at": "2026-10-19T16:49:08.034Z"
     }
@@ -134,6 +139,36 @@
     }
   ],
   "attendances": [
+    {
+      "id": "att_1792589171768_4q026",
+      "member_id": "mem_demo_4",
+      "checked_in_at": "2026-10-21T13:26:11.564Z",
+      "recorded_by": "sambafitnessadmin@gmail.com",
+      "method": "manuel",
+      "member_name": "Marieme Sy",
+      "member_phone": "+221 77 678 90 12",
+      "member_status": "actif"
+    },
+    {
+      "id": "att_1792585051786_hri1n",
+      "member_id": "mem_1792428612760_2b4vy",
+      "checked_in_at": "2026-10-21T12:17:31.786Z",
+      "recorded_by": "sambafitnessadmin@gmail.com",
+      "method": "manuel",
+      "member_name": "mairame",
+      "member_phone": "+221 770362616",
+      "member_status": "actif"
+    },
+    {
+      "id": "att_1792584953342_p4tgu",
+      "member_id": "mem_demo_2",
+      "checked_in_at": "2026-10-21T12:15:53.342Z",
+      "recorded_by": "demo@local",
+      "method": "manuel",
+      "member_name": "Awa Diallo",
+      "member_phone": "+221 77 456 78 90",
+      "member_status": "expire_bientot"
+    },
     {
       "id": "att_1792429039853_0k9zv",
       "member_id": "mem_1792428612760_2b4vy",

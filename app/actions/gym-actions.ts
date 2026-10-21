@@ -12,6 +12,9 @@ import {
   getExpenses,
   recordExpense,
   softDeleteExpense,
+  getMemberByQrToken,
+  regenerateMemberQrToken,
+  AttendanceError,
   type Member,
   type Payment,
   type Attendance,
@@ -27,7 +30,15 @@ import { logger } from "@/lib/logger";
 
 export type ActionResult<T = object> =
   | ({ success: true } & T)
-  | { success: false; error: string };
+  | {
+      success: false;
+      error: string;
+      isExpired?: boolean;
+      isDuplicate?: boolean;
+      memberId?: string;
+      memberName?: string;
+      checkInTime?: string;
+    };
 
 async function guarded<T extends object>(
   minRole: AdminRole,
@@ -40,6 +51,17 @@ async function guarded<T extends object>(
   } catch (err) {
     if (err instanceof AdminAuthError) {
       return { success: false, error: err.message };
+    }
+    if (err instanceof AttendanceError) {
+      return {
+        success: false,
+        error: err.message,
+        isExpired: err.isExpired,
+        isDuplicate: err.isDuplicate,
+        memberId: err.memberId,
+        memberName: err.memberName,
+        checkInTime: err.checkInTime,
+      };
     }
     logger.error({ err }, "Erreur action gym");
     return { success: false, error: "Une erreur est survenue. Réessayez." };
@@ -225,4 +247,57 @@ export async function softDeleteExpenseAction(id: string): Promise<ActionResult>
     return {};
   });
 }
+
+/**
+ * Pointage par scan direct du jeton QR opaque (serveur = source de vérité).
+ */
+export async function checkInByQrTokenAction(
+  qrToken: string
+): Promise<ActionResult<{
+  attendance: Attendance;
+  member: Member;
+  memberName: string;
+  message: string;
+}>> {
+  return guarded("receptionist", async () => {
+    const cleanToken = (qrToken || "").trim();
+    if (!cleanToken) {
+      throw new AdminAuthError("Jeton QR manquant ou invalide.");
+    }
+
+    const member = await getMemberByQrToken(cleanToken);
+    if (!member) {
+      throw new AdminAuthError("QR code non reconnu ou carte introuvable.");
+    }
+
+    const admin = await requireAdmin("receptionist");
+    const res = await recordAttendance(member.id, admin.email, "qr_code");
+    revalidatePath("/admin");
+
+    return {
+      attendance: res.attendance,
+      member: res.member,
+      memberName: res.memberName,
+      message: `Entrée validée pour ${res.memberName} !`,
+    };
+  });
+}
+
+/**
+ * Régénération d'un nouveau jeton QR opaque (invalide immédiatement l'ancien).
+ */
+export async function regenerateMemberQrTokenAction(
+  memberId: string
+): Promise<ActionResult<{ member: Member }>> {
+  return guarded("receptionist", async () => {
+    if (!memberId || typeof memberId !== "string") {
+      throw new AdminAuthError("Identifiant de membre invalide.");
+    }
+
+    const member = await regenerateMemberQrToken(memberId);
+    revalidatePath("/admin");
+    return { member };
+  });
+}
+
 

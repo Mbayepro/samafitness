@@ -1,12 +1,21 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { ArrowUpRight, ArrowDownRight, CreditCard, Receipt, X } from "lucide-react";
 import type { Payment, Member, PaymentMethod, Expense, ExpenseCategory } from "@/lib/gym-store";
+import { formatAdminFCFA, formatAdminDate } from "./ui/AdminFormatters";
 
 interface GymPaymentsTabProps {
   payments: Payment[];
   expenses?: Expense[];
   members: Member[];
+  history6Months?: {
+    monthKey: string;
+    monthLabel: string;
+    revenue: number;
+    expenses: number;
+    net: number;
+  }[];
   isSuperAdmin?: boolean;
   preSelectedMember?: Member | null;
   onRecordPayment: (data: {
@@ -51,6 +60,7 @@ export default function GymPaymentsTab({
   payments,
   expenses = [],
   members,
+  history6Months = [],
   isSuperAdmin = false,
   preSelectedMember,
   onRecordPayment,
@@ -60,6 +70,29 @@ export default function GymPaymentsTab({
 }: GymPaymentsTabProps) {
   // Navigation sous-vues : Entrées / Sorties
   const [subView, setSubView] = useState<"incomes" | "expenses">("incomes");
+
+  // Totaux et échelle pour le graphique sur 6 mois
+  const max6MonthsVal = useMemo(() => {
+    if (!history6Months || history6Months.length === 0) return 100000;
+    const peak = Math.max(
+      ...history6Months.flatMap((m) => [m.revenue, m.expenses])
+    );
+    return Math.max(peak, 100000);
+  }, [history6Months]);
+
+  const totals6Months = useMemo(() => {
+    if (!history6Months || history6Months.length === 0) {
+      return { revenue: 0, expenses: 0, net: 0 };
+    }
+    return history6Months.reduce(
+      (acc, m) => ({
+        revenue: acc.revenue + m.revenue,
+        expenses: acc.expenses + m.expenses,
+        net: acc.net + m.net,
+      }),
+      { revenue: 0, expenses: 0, net: 0 }
+    );
+  }, [history6Months]);
 
   // ── ÉTAT VUE ENTRÉES (PAIEMENTS) ───────────────────────────────────
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(Boolean(preSelectedMember));
@@ -215,13 +248,13 @@ export default function GymPaymentsTab({
     ];
     const rows = payments.map((p) => [
       p.id,
-      new Date(p.created_at).toLocaleDateString("fr-FR"),
+      formatAdminDate(p.created_at),
       `"${(p.member_name || "").replace(/"/g, '""')}"`,
       `"${p.member_phone || ""}"`,
       p.amount_fcfa,
       `"${p.method}"`,
-      p.period_start,
-      p.period_end,
+      formatAdminDate(p.period_start),
+      formatAdminDate(p.period_end),
       `"${p.recorded_by || ""}"`,
       `"${(p.note || "").replace(/"/g, '""')}"`,
     ]);
@@ -309,6 +342,106 @@ export default function GymPaymentsTab({
 
   return (
     <div className="space-y-6">
+      {/* ── GRAPHIQUE REVENUS VS DÉPENSES SUR 6 MOIS (SUPER-ADMIN) ───── */}
+      {isSuperAdmin && history6Months && history6Months.length > 0 && (
+        <div className="rounded-2xl border border-white/10 bg-[#121212] p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+            <div>
+              <h2 className="text-sm font-black uppercase text-white flex items-center gap-2">
+                <span>Finances · 6 derniers mois</span>
+              </h2>
+              <p className="mt-0.5 text-xs text-white/50">
+                Comparaison mensuelle des entrées d&apos;abonnements et des sorties de caisse.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-sm bg-emerald-400" />
+                <span className="text-white/70 font-semibold">Revenus</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-sm bg-rose-400" />
+                <span className="text-white/70 font-semibold">Dépenses</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bar Chart 6 Mois */}
+          <div className="mt-6 grid grid-cols-3 sm:grid-cols-6 gap-3">
+            {history6Months.map((m) => {
+              const revPct = Math.round((m.revenue / max6MonthsVal) * 100);
+              const expPct = Math.round((m.expenses / max6MonthsVal) * 100);
+              const isNetPositive = m.net >= 0;
+
+              return (
+                <div key={m.monthKey} className="flex flex-col items-center">
+                  {/* Zone des barres */}
+                  <div
+                    className="relative flex h-36 w-full items-end justify-center gap-1.5 rounded-xl border border-white/5 bg-black/40 p-2"
+                    title={`${m.monthLabel} : Revenus ${m.revenue.toLocaleString("fr-FR")} FCFA | Dépenses ${m.expenses.toLocaleString("fr-FR")} FCFA | Solde ${m.net.toLocaleString("fr-FR")} FCFA`}
+                  >
+                    {/* Barre Revenus */}
+                    <div
+                      className="w-1/2 max-w-[20px] rounded-t bg-emerald-400 transition-all hover:brightness-110"
+                      style={{ height: `${Math.max(4, revPct)}%` }}
+                    />
+                    {/* Barre Dépenses */}
+                    <div
+                      className="w-1/2 max-w-[20px] rounded-t bg-rose-400 transition-all hover:brightness-110"
+                      style={{ height: `${Math.max(4, expPct)}%` }}
+                    />
+                  </div>
+
+                  {/* Libellé Mois */}
+                  <span className="mt-2 text-xs font-bold text-white truncate max-w-full">
+                    {m.monthLabel}
+                  </span>
+
+                  {/* Solde net du mois : masqué si négligeable (< 1 000 FCFA) pour éviter les +0k inutiles */}
+                  {Math.abs(m.net) >= 1000 && (
+                    <span
+                      className={`mt-0.5 text-[10px] font-black font-mono ${
+                        isNetPositive ? "text-emerald-400" : "text-rose-400"
+                      }`}
+                    >
+                      {isNetPositive ? "+" : ""}
+                      {(m.net / 1000).toFixed(0)}k
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Synthèse cumulée 6 mois */}
+          <div className="mt-6 pt-4 border-t border-white/5 grid grid-cols-3 gap-3 text-center">
+            <div className="rounded-xl bg-white/[0.02] p-2.5">
+              <p className="text-[10px] font-bold uppercase text-white/40">Total Revenus 6m</p>
+              <p className="text-sm font-black text-emerald-400 mt-0.5">
+                {totals6Months.revenue.toLocaleString("fr-FR")} FCFA
+              </p>
+            </div>
+            <div className="rounded-xl bg-white/[0.02] p-2.5">
+              <p className="text-[10px] font-bold uppercase text-white/40">Total Dépenses 6m</p>
+              <p className="text-sm font-black text-rose-400 mt-0.5">
+                {totals6Months.expenses.toLocaleString("fr-FR")} FCFA
+              </p>
+            </div>
+            <div className="rounded-xl bg-white/[0.02] p-2.5">
+              <p className="text-[10px] font-bold uppercase text-white/40">Solde Net Cumulé</p>
+              <p
+                className={`text-sm font-black mt-0.5 ${
+                  totals6Months.net >= 0 ? "text-emerald-400" : "text-rose-400"
+                }`}
+              >
+                {totals6Months.net >= 0 ? "+" : ""}
+                {totals6Months.net.toLocaleString("fr-FR")} FCFA
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       {/* ── SÉLECTEUR DE SOUS-VUE : ENTRÉES / SORTIES (SUPER-ADMIN) ───── */}
       {isSuperAdmin && (
         <div role="tablist" aria-label="Sous-vues finances" className="flex items-center gap-2 border-b border-white/10 pb-4">
@@ -317,16 +450,17 @@ export default function GymPaymentsTab({
             role="tab"
             aria-selected={subView === "incomes"}
             onClick={() => setSubView("incomes")}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition ${
+            className={`flex items-center gap-2 rounded-[8px] px-4 py-2 text-xs font-medium transition min-h-[40px] ${
               subView === "incomes"
-                ? "bg-lime-400 text-black shadow-md shadow-lime-400/20"
+                ? "bg-white text-black font-semibold"
                 : "border border-white/10 bg-white/5 text-white/70 hover:border-white/30 hover:text-white"
             }`}
           >
-            <span>📈 Entrées (Paiements)</span>
+            <ArrowUpRight size={15} strokeWidth={1.75} />
+            <span>Entrées (Paiements)</span>
             <span
-              className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${
-                subView === "incomes" ? "bg-black text-lime-400" : "bg-white/10 text-white/60"
+              className={`rounded-[4px] px-1.5 py-0.5 text-[11px] font-medium ${
+                subView === "incomes" ? "bg-black/10 text-black font-semibold" : "bg-white/10 text-white/60"
               }`}
             >
               {payments.length}
@@ -338,16 +472,17 @@ export default function GymPaymentsTab({
             role="tab"
             aria-selected={subView === "expenses"}
             onClick={() => setSubView("expenses")}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition ${
+            className={`flex items-center gap-2 rounded-[8px] px-4 py-2 text-xs font-medium transition min-h-[40px] ${
               subView === "expenses"
-                ? "bg-rose-500 text-white shadow-md shadow-rose-500/20"
+                ? "bg-white text-black font-semibold"
                 : "border border-white/10 bg-white/5 text-white/70 hover:border-white/30 hover:text-white"
             }`}
           >
-            <span>📉 Sorties (Dépenses)</span>
+            <ArrowDownRight size={15} strokeWidth={1.75} />
+            <span>Sorties (Dépenses)</span>
             <span
-              className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${
-                subView === "expenses" ? "bg-black text-rose-300" : "bg-white/10 text-white/60"
+              className={`rounded-[4px] px-1.5 py-0.5 text-[11px] font-medium ${
+                subView === "expenses" ? "bg-black/10 text-black font-semibold" : "bg-white/10 text-white/60"
               }`}
             >
               {activeExpenses.length}
@@ -470,16 +605,16 @@ export default function GymPaymentsTab({
                 <button
                   type="button"
                   onClick={handleExportCSV}
-                  className="rounded-xl border border-white/15 bg-white/5 px-3.5 py-2 text-xs font-bold text-white hover:border-lime-400 hover:text-lime-400 transition"
+                  className="rounded-md border border-white/15 bg-white/5 px-3 py-2 text-xs font-medium text-white/90 hover:bg-white/10 transition"
                 >
                   Exporter CSV
                 </button>
                 <button
                   type="button"
                   onClick={() => openNewPaymentModal()}
-                  className="rounded-xl bg-lime-400 px-4 py-2 text-xs font-black uppercase tracking-wider text-black hover:bg-lime-300 transition shadow-md shadow-lime-400/20"
+                  className="rounded-md bg-lime-400 px-3.5 py-2 text-xs font-semibold text-black hover:bg-lime-300 transition"
                 >
-                  + Encaisser un Paiement
+                  + Encaisser un paiement
                 </button>
               </div>
             </div>
@@ -487,10 +622,10 @@ export default function GymPaymentsTab({
             {/* Contenu du tableau ou état vide */}
             {filteredPayments.length === 0 ? (
               <div className="p-12 text-center">
-                <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-xs font-black text-white/40">
-                  PAY
-                </span>
-                <h3 className="mt-3 text-lg font-bold text-white">Aucun paiement trouvé</h3>
+                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-[6px] border border-white/5 bg-white/[0.02] text-zinc-400">
+                  <CreditCard size={18} strokeWidth={1.75} />
+                </div>
+                <h3 className="mt-3 text-sm font-medium text-white">Aucun paiement trouvé</h3>
                 <p className="mt-1 text-xs text-white/50">
                   Les encaissements enregistrés apparaîtront ici avec possibilité d&apos;imprimer ou
                   d&apos;envoyer le reçu par WhatsApp.
@@ -500,13 +635,13 @@ export default function GymPaymentsTab({
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-white/10 bg-black/40 text-[10px] font-black uppercase tracking-wider text-white/50">
-                      <th className="py-4 px-6">Adhérent</th>
-                      <th className="py-4 px-4">Montant</th>
-                      <th className="py-4 px-4">Moyen</th>
-                      <th className="py-4 px-4">Période couverte</th>
-                      <th className="py-4 px-4">Date & Encaissé par</th>
-                      <th className="py-4 px-6 text-right">Reçu</th>
+                    <tr className="border-b border-white/10 bg-black/40 text-xs font-semibold text-white/60">
+                      <th className="py-3 px-6">Adhérent</th>
+                      <th className="py-3 px-4">Montant</th>
+                      <th className="py-3 px-4">Moyen</th>
+                      <th className="py-3 px-4">Période couverte</th>
+                      <th className="py-3 px-4">Date & encaissé par</th>
+                      <th className="py-3 px-6 text-right">Reçu</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5 text-xs">
@@ -544,14 +679,14 @@ export default function GymPaymentsTab({
 
                         <td className="py-4 px-4">
                           <span className="font-mono text-[11px] text-white/70">
-                            Du {p.period_start} au{" "}
-                            <strong className="text-white">{p.period_end}</strong>
+                            Du {formatAdminDate(p.period_start)} au{" "}
+                            <strong className="text-white">{formatAdminDate(p.period_end)}</strong>
                           </span>
                         </td>
 
                         <td className="py-4 px-4">
                           <span className="block text-white/70">
-                            {new Date(p.created_at).toLocaleDateString("fr-FR")}
+                            {formatAdminDate(p.created_at)}
                           </span>
                           <span className="text-[11px] text-white/40">
                             Par {p.recorded_by || "Admin"}
@@ -561,7 +696,7 @@ export default function GymPaymentsTab({
                         <td className="py-4 px-6 text-right">
                           <button
                             onClick={() => setSelectedReceipt(p)}
-                            className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-bold text-white hover:border-lime-400 hover:text-lime-400 transition"
+                            className="rounded-md border border-white/15 bg-white/5 px-2.5 py-1 text-xs font-medium text-white hover:border-white/30 transition"
                           >
                             Reçu
                           </button>
@@ -621,7 +756,7 @@ export default function GymPaymentsTab({
                   >
                     <span className="text-white/60">{CATEGORY_LABELS[cat]} :</span>
                     <span className="font-mono font-bold text-white">
-                      {totalCat.toLocaleString("fr-FR")} F
+                      {totalCat.toLocaleString("fr-FR")} FCFA
                     </span>
                   </div>
                 );
@@ -669,9 +804,9 @@ export default function GymPaymentsTab({
                 <button
                   type="button"
                   onClick={() => setIsExpenseModalOpen(true)}
-                  className="rounded-xl bg-rose-500 px-4 py-2 text-xs font-black uppercase tracking-wider text-white hover:bg-rose-600 transition shadow-md shadow-rose-500/20"
+                  className="rounded-md bg-rose-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-rose-500 transition"
                 >
-                  + Enregistrer une Dépense
+                  + Enregistrer une dépense
                 </button>
               </div>
             </div>
@@ -679,10 +814,10 @@ export default function GymPaymentsTab({
             {/* Contenu du tableau ou état vide */}
             {filteredExpenses.length === 0 ? (
               <div className="p-12 text-center">
-                <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-xs font-black text-white/40">
-                  DÉP
-                </span>
-                <h3 className="mt-3 text-lg font-bold text-white">Aucune dépense enregistrée</h3>
+                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-[6px] border border-white/5 bg-white/[0.02] text-zinc-400">
+                  <Receipt size={18} strokeWidth={1.75} />
+                </div>
+                <h3 className="mt-3 text-sm font-medium text-white">Aucune dépense enregistrée</h3>
                 <p className="mt-1 text-xs text-white/50">
                   {expenseSearch || expenseCategoryFilter !== "all"
                     ? "Aucune dépense ne correspond à vos filtres de recherche."
@@ -693,13 +828,13 @@ export default function GymPaymentsTab({
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-white/10 bg-black/40 text-[10px] font-black uppercase tracking-wider text-white/50">
-                      <th className="py-4 px-6">Date de paiement</th>
-                      <th className="py-4 px-4">Catégorie</th>
-                      <th className="py-4 px-6">Description / Motif</th>
-                      <th className="py-4 px-4">Montant</th>
-                      <th className="py-4 px-4">Saisi par</th>
-                      <th className="py-4 px-6 text-right">Actions</th>
+                    <tr className="border-b border-white/10 bg-black/40 text-xs font-semibold text-white/60">
+                      <th className="py-3 px-6">Date de paiement</th>
+                      <th className="py-3 px-4">Catégorie</th>
+                      <th className="py-3 px-6">Description / Motif</th>
+                      <th className="py-3 px-4">Montant</th>
+                      <th className="py-3 px-4">Saisi par</th>
+                      <th className="py-3 px-6 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5 text-xs">
@@ -707,7 +842,7 @@ export default function GymPaymentsTab({
                       <tr key={exp.id} className="transition hover:bg-white/[0.02]">
                         <td className="py-4 px-6">
                           <span className="font-mono text-xs font-bold text-white">
-                            {exp.paid_at}
+                            {formatAdminDate(exp.paid_at)}
                           </span>
                         </td>
 
@@ -744,7 +879,7 @@ export default function GymPaymentsTab({
                           {onDeleteExpense && (
                             <button
                               onClick={() => onDeleteExpense(exp.id, exp.description)}
-                              className="rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 py-1 text-xs text-red-400 hover:bg-red-500 hover:text-white transition"
+                              className="rounded-md border border-red-500/25 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-400 hover:bg-red-500 hover:text-white transition"
                               title="Archiver cette dépense"
                             >
                               Archiver
@@ -770,10 +905,12 @@ export default function GymPaymentsTab({
                 Enregistrer une nouvelle dépense
               </h3>
               <button
+                type="button"
                 onClick={() => setIsExpenseModalOpen(false)}
-                className="text-white/50 hover:text-white text-lg"
+                aria-label="Fermer"
+                className="rounded-[6px] p-2 text-white/50 hover:bg-white/10 hover:text-white transition"
               >
-                ✕
+                <X size={16} strokeWidth={1.75} />
               </button>
             </div>
 
@@ -871,10 +1008,12 @@ export default function GymPaymentsTab({
                 Enregistrer un paiement & prolonger
               </h3>
               <button
+                type="button"
                 onClick={() => setIsPaymentModalOpen(false)}
-                className="text-white/50 hover:text-white text-lg"
+                aria-label="Fermer"
+                className="rounded-[6px] p-2 text-white/50 hover:bg-white/10 hover:text-white transition"
               >
-                ✕
+                <X size={16} strokeWidth={1.75} />
               </button>
             </div>
 
@@ -1071,7 +1210,7 @@ export default function GymPaymentsTab({
                 <div className="flex justify-between">
                   <span className="text-white/50">Date de paiement :</span>
                   <span className="text-white/70">
-                    {new Date(selectedReceipt.created_at).toLocaleDateString("fr-FR")}
+                    {formatAdminDate(selectedReceipt.created_at)}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -1081,7 +1220,7 @@ export default function GymPaymentsTab({
                 <div className="flex justify-between">
                   <span className="text-white/50">Période couverte :</span>
                   <span className="font-mono text-[11px] text-white">
-                    {selectedReceipt.period_start} au {selectedReceipt.period_end}
+                    {formatAdminDate(selectedReceipt.period_start)} au {formatAdminDate(selectedReceipt.period_end)}
                   </span>
                 </div>
 
@@ -1115,7 +1254,7 @@ export default function GymPaymentsTab({
                     `--------------------------------\n` +
                     `Bonjour ${selectedReceipt.member_name},\n` +
                     `Nous confirmons la bonne réception de votre paiement de *${selectedReceipt.amount_fcfa.toLocaleString("fr-FR")} FCFA* via *${selectedReceipt.method}*.\n\n` +
-                    `Période : du ${selectedReceipt.period_start} au ${selectedReceipt.period_end}\n` +
+                    `Période : du ${formatAdminDate(selectedReceipt.period_start)} au ${formatAdminDate(selectedReceipt.period_end)}\n` +
                     `Reçu : #${selectedReceipt.id.slice(-8)}\n\n` +
                     `Merci pour votre fidélité et à très vite à la salle !`
                 );

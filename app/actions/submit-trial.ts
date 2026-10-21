@@ -34,6 +34,17 @@ export async function submitTrialAction(
     // Si headers() n'est pas disponible (ex: environnement de test isolé), on continue
   }
 
+  // Protection Honeypot : si ce champ caché est rempli, c'est un bot automatisé
+  const honeypot = formData.get("website_hp") as string | null;
+  if (honeypot && honeypot.trim().length > 0) {
+    logger.warn({ honeypot }, "Soumission interceptée par le honeypot anti-spam");
+    return {
+      success: true,
+      message:
+        "Merci ! Votre demande d'inscription a bien été enregistrée. Nous vous contacterons rapidement pour finaliser votre inscription.",
+    };
+  }
+
   const name = (formData.get("name") as string)?.trim();
   const phone = (formData.get("phone") as string)?.trim();
   const salle = (formData.get("salle") as string)?.trim();

@@ -192,6 +192,17 @@ export default function Contact() {
                       <span>{state.message}</span>
                     </div>
                   )}
+                  {/* Protection anti-spam honeypot invisible */}
+                  <div className="hidden" aria-hidden="true" style={{ display: "none" }}>
+                    <label htmlFor="website_hp">Ne pas remplir</label>
+                    <input
+                      id="website_hp"
+                      name="website_hp"
+                      type="text"
+                      tabIndex={-1}
+                      autoComplete="off"
+                    />
+                  </div>
 
                   {/* Nom complet */}
                   <div>

@@ -158,6 +158,7 @@ export default function AdminDashboard({ admin }: { admin: AdminContext }) {
               onRefreshLeads={data.loadData}
               onExportLeadsCSV={() => actions.handleExportCSV(data.leads)}
               onUpdateLeadStatus={actions.handleUpdateStatus}
+              onArchiveBatchLeads={actions.handleArchiveBatchLeads}
               onDeleteLead={actions.handleDeleteLead}
               onStartConvertLead={(lead) => setConvertingLead(lead)}
             />
@@ -185,6 +186,7 @@ export default function AdminDashboard({ admin }: { admin: AdminContext }) {
               payments={data.payments}
               expenses={data.expenses}
               members={data.members}
+              history6Months={activeStats.history6Months}
               isSuperAdmin={isSuperAdmin}
               preSelectedMember={preSelectedMemberForPayment}
               onRecordPayment={actions.handleRecordPayment}

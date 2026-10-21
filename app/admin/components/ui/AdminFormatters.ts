@@ -82,3 +82,17 @@ export function formatAmountForWhatsApp(amount: number | null | undefined): stri
 export function formatAmountForExport(amount: number | null | undefined): number {
   return Math.round(Number(amount) || 0);
 }
+
+/**
+ * Formate le numéro de membre court au format SF-0001 (stable, jamais recalculé).
+ */
+export function formatMemberNumber(num?: number | null, fallbackId?: string): string {
+  if (typeof num === "number" && num > 0) {
+    return `SF-${String(num).padStart(4, "0")}`;
+  }
+  if (fallbackId && fallbackId.startsWith("mem_demo_")) {
+    const digit = fallbackId.replace("mem_demo_", "");
+    return `SF-${digit.padStart(4, "0")}`;
+  }
+  return "SF-0000";
+}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Zap } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -13,12 +14,14 @@ export default function AdminLoginPage() {
   const [supabase] = useState(() => createClient());
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [authError, setAuthError] = useState<string | null>(() => {
-    if (typeof window !== "undefined") {
-      return new URLSearchParams(window.location.search).get("error");
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const errorParam = new URLSearchParams(window.location.search).get("error");
+    if (errorParam) {
+      setAuthError(errorParam);
     }
-    return null;
-  });
+  }, []);
   const [authLoading, setAuthLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
 
@@ -158,9 +161,16 @@ export default function AdminLoginPage() {
                 type="button"
                 onClick={handleDemo}
                 disabled={demoLoading}
-                className="w-full rounded-full border border-white/20 bg-white/5 py-2.5 px-4 text-xs font-bold text-white/80 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-[8px] border border-white/20 bg-white/5 py-2.5 px-4 text-xs font-medium text-white/80 transition hover:bg-white/10 hover:text-white disabled:opacity-50 min-h-[40px]"
               >
-                {demoLoading ? "Chargement..." : "⚡ Accéder en Mode Démo Local"}
+                {demoLoading ? (
+                  "Chargement..."
+                ) : (
+                  <>
+                    <Zap size={16} strokeWidth={1.75} />
+                    <span>Accéder en mode démo local</span>
+                  </>
+                )}
               </button>
             </div>
           )}

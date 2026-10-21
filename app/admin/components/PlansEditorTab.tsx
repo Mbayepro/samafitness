@@ -1,6 +1,7 @@
 "use client";
 
 import type { Dispatch, FormEvent, SetStateAction } from "react";
+import { Star, X } from "lucide-react";
 import type { SiteContentType } from "@/lib/content-store";
 
 interface PlansEditorTabProps {
@@ -119,13 +120,20 @@ export default function PlansEditorTab({ content, setContent, isPending, onSubmi
                         }));
                         setContent({ ...content, plans: updated });
                       }}
-                      className={`mt-1 w-full rounded-xl border py-2 text-xs font-bold transition ${
+                      className={`mt-1 w-full rounded-[6px] border py-2 text-xs font-medium transition flex items-center justify-center gap-1.5 ${
                         plan.highlighted
-                          ? "border-lime-400 bg-lime-400 text-black font-black"
+                          ? "border-[#a3e635] bg-[#a3e635] text-[#0a0f1d] font-semibold"
                           : "border-white/10 bg-black/50 text-white/60 hover:text-white"
                       }`}
                     >
-                      {plan.highlighted ? "★ Recommandée" : "Standard"}
+                      {plan.highlighted ? (
+                        <>
+                          <Star size={13} className="fill-current" />
+                          <span>Recommandée</span>
+                        </>
+                      ) : (
+                        "Standard"
+                      )}
                     </button>
                   </div>
                 </div>
@@ -201,9 +209,10 @@ export default function PlansEditorTab({ content, setContent, isPending, onSubmi
                             );
                             setContent({ ...content, plans: updated });
                           }}
-                          className="text-xs text-white/40 hover:text-red-400 px-1"
+                          aria-label="Supprimer la caractéristique"
+                          className="text-xs text-white/40 hover:text-red-400 p-1"
                         >
-                          ✕
+                          <X size={14} strokeWidth={1.75} />
                         </button>
                       </div>
                     ))}

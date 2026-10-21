@@ -3,6 +3,7 @@
 import { useTransition, type Dispatch, type FormEvent, type SetStateAction } from "react";
 import {
   updateLeadStatusAction,
+  archiveLeadsBatchAction,
   deleteLeadAction,
   saveSiteContentAction,
   resetSiteContentAction,
@@ -51,6 +52,21 @@ export function useAdminActions({
       }
       setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status: newStatus } : l)));
       showFeedback("success", `Statut mis à jour : ${newStatus}`);
+    });
+  };
+
+  const handleArchiveBatchLeads = (ids: string[]) => {
+    if (!ids.length) return;
+    startTransition(async () => {
+      const res = await archiveLeadsBatchAction(ids);
+      if (!res.success) {
+        showFeedback("error", res.error);
+        return;
+      }
+      setLeads((prev) =>
+        prev.map((l) => (ids.includes(l.id) ? { ...l, status: "archivé" } : l))
+      );
+      showFeedback("success", `${ids.length} demande(s) archivée(s).`);
     });
   };
 
@@ -331,6 +347,7 @@ export function useAdminActions({
   return {
     isPending,
     handleUpdateStatus,
+    handleArchiveBatchLeads,
     handleDeleteLead,
     handleExportCSV,
     handleSaveMember,

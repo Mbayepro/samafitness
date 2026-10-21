@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { KeyRound, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface ChangePasswordModalProps {
@@ -72,20 +73,20 @@ export default function ChangePasswordModal({
       <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#121212] p-6 shadow-2xl">
         <div className="flex items-center justify-between border-b border-white/10 pb-4">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-lime-400/10 text-lime-400 font-black text-xs">
-              MDP
+            <span className="flex h-8 w-8 items-center justify-center rounded-[6px] border border-white/10 bg-white/[0.04] text-zinc-300">
+              <KeyRound size={16} strokeWidth={1.75} />
             </span>
             <div>
-              <h2 className="text-base font-black uppercase text-white">Changer de mot de passe</h2>
+              <h2 className="text-sm font-semibold text-white">Changer de mot de passe</h2>
               <p className="text-xs text-white/50">{adminEmail}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="rounded-full p-2 text-white/40 hover:bg-white/10 hover:text-white transition"
+            className="rounded-[6px] p-2 text-white/40 hover:bg-white/10 hover:text-white transition"
             aria-label="Fermer"
           >
-            ✕
+            <X size={16} strokeWidth={1.75} />
           </button>
         </div>
 

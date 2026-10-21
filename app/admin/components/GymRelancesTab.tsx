@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { CheckCircle2 } from "lucide-react";
 import type { Member } from "@/lib/gym-store";
 import { formatSenegalPhoneForWhatsApp } from "@/lib/whatsapp";
+import { formatAdminDate } from "./ui/AdminFormatters";
 
 interface GymRelancesTabProps {
   members: Member[];
@@ -94,10 +96,10 @@ export default function GymRelancesTab({
       {/* ── LISTE DES MEMBRES À RELANCER ────────────────────────────── */}
       {filtered.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-[#121212] p-10 text-center">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-xs font-black text-white/40">
-            OK
-          </span>
-          <h3 className="mt-2 text-sm font-bold text-white">Aucun membre à relancer !</h3>
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-[6px] border border-white/5 bg-white/[0.02] text-emerald-400">
+            <CheckCircle2 size={18} strokeWidth={1.75} />
+          </div>
+          <h3 className="mt-2 text-sm font-medium text-white">Aucun membre à relancer</h3>
           <p className="mt-1 text-xs text-white/50">
             Tous les adhérents de Samba Fitness Ndioum sont actuellement en règle avec un abonnement actif.
           </p>
@@ -114,18 +116,19 @@ export default function GymRelancesTab({
             const isExpired = member.status === "expire";
 
             // Messages personnalisés
+            const formattedDate = formatAdminDate(member.end_date);
             const msgFR = encodeURIComponent(
               `Bonjour ${member.full_name}, c'est Samba Diop de Samba Fitness Ndioum. ` +
                 (isExpired
-                  ? `Votre abonnement est arrivé à échéance le ${member.end_date}. Souhaitez-vous le renouveler (par Wave ou directement au club) pour continuer vos entraînements ?`
-                  : `Votre abonnement arrive à échéance dans ${diffDays} jour(s) (le ${member.end_date}). Souhaitez-vous le renouveler pour garder votre accès sans interruption ?`)
+                  ? `Votre abonnement est arrivé à échéance le ${formattedDate}. Souhaitez-vous le renouveler (par Wave ou directement au club) pour continuer vos entraînements ?`
+                  : `Votre abonnement arrive à échéance dans ${diffDays} jour(s) (le ${formattedDate}). Souhaitez-vous le renouveler pour garder votre accès sans interruption ?`)
             );
 
             const msgWolof = encodeURIComponent(
               `Salam ${member.full_name}, Samba Diop la Samba Fitness Ndioum. ` +
                 (isExpired
-                  ? `Sa abonnement dafa jeex ci bés bi ${member.end_date}. Ndax danga bëgg ñu yéssal ko (ci Wave walla ci club bi) ngir nga mëna wéy di entraîné ?`
-                  : `Sa abonnement dafay jeex ci ${diffDays} fan (bés bi ${member.end_date}). Ndax danga bëgg ñu yéssal ko ngir baña dagg ?`)
+                  ? `Sa abonnement dafa jeex ci bés bi ${formattedDate}. Ndax danga bëgg ñu yéssal ko (ci Wave walla ci club bi) ngir nga mëna wéy di entraîné ?`
+                  : `Sa abonnement dafay jeex ci ${diffDays} fan (bés bi ${formattedDate}). Ndax danga bëgg ñu yéssal ko ngir baña dagg ?`)
             );
 
             return (
@@ -157,7 +160,7 @@ export default function GymRelancesTab({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-white/40">Échéance :</span>
-                      <span className="font-mono font-bold text-white">{member.end_date}</span>
+                      <span className="font-mono font-bold text-white">{formattedDate}</span>
                     </div>
                     {member.notes && (
                       <p className="mt-1 text-[11px] text-white/40 italic">Note : {member.notes}</p>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ShieldAlert } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AccessDenied({ email }: { email: string }) {
@@ -23,7 +24,9 @@ export default function AccessDenied({ email }: { email: string }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#080808] px-6 text-white">
       <div className="w-full max-w-md rounded-3xl border border-red-500/20 bg-[#121212] p-8 text-center shadow-2xl">
-        <p className="text-4xl" aria-hidden="true">⛔</p>
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-400">
+          <ShieldAlert size={24} strokeWidth={1.75} />
+        </div>
         <h1 className="mt-4 text-xl font-black uppercase">Accès refusé</h1>
         <p className="mt-3 text-sm text-white/60">
           Le compte <strong className="text-white">{email}</strong> n&apos;est pas autorisé à

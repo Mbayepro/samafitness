@@ -74,6 +74,21 @@ export async function updateLeadStatusAction(
   });
 }
 
+export async function archiveLeadsBatchAction(
+  ids: string[]
+): Promise<ActionResult<{ count: number }>> {
+  return guarded("receptionist", async () => {
+    if (!Array.isArray(ids) || ids.length === 0) {
+      throw new AdminAuthError("Aucune demande sélectionnée.");
+    }
+    for (const id of ids) {
+      await updateLeadStatus(id, "archivé");
+    }
+    revalidatePath("/admin");
+    return { count: ids.length };
+  });
+}
+
 export async function deleteLeadAction(id: string): Promise<ActionResult> {
   return guarded("super_admin", async () => {
     await deleteLead(String(id));
@@ -187,17 +202,30 @@ export async function listStaffAccountsAction(): Promise<ActionResult<{ staff: S
   return guarded("super_admin", async () => {
     if (isSupabaseConfigured()) {
       try {
-        const supabase = await createClient();
-        const { data, error } = await supabase
+        // Préférer le client service_role (côté serveur) pour contourner les restrictions RLS
+        const adminClient = createAdminServiceClient();
+        const client = adminClient || (await createClient());
+
+        // Timeout de sécurité de 5s pour éviter tout blocage réseau / pause Supabase
+        const fetchPromise = client
           .from("admin_whitelist")
           .select("email, role, created_at")
           .order("created_at", { ascending: false });
 
-        if (!error && data) {
-          return { staff: data as StaffAccount[] };
+        const timeoutPromise = new Promise<{ data: null; error: Error }>((_, reject) =>
+          setTimeout(() => reject(new Error("Timeout Supabase après 5000ms")), 5000)
+        );
+
+        const { data, error } = (await Promise.race([fetchPromise, timeoutPromise])) as {
+          data: StaffAccount[] | null;
+          error: unknown;
+        };
+
+        if (!error && data && data.length > 0) {
+          return { staff: data };
         }
       } catch (err) {
-        logger.warn({ err }, "Erreur listStaffAccountsAction Supabase, repli local");
+        logger.warn({ err }, "Erreur ou timeout listStaffAccountsAction Supabase, repli local");
       }
     }
 

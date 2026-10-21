@@ -37,7 +37,8 @@ export type TrialFormInput = z.infer<typeof trialFormSchema>;
  * Member Create / Update Schema
  */
 export const memberSchema = z.object({
-  id: z.string().uuid().optional(),
+  id: z.string().optional(),
+  member_number: z.number().int().positive().optional(),
   full_name: z
     .string()
     .trim()
@@ -66,6 +67,7 @@ export const memberSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Format de date fin invalide (AAAA-MM-JJ)."),
   notes: z.string().max(500, "Note trop longue.").optional().or(z.literal("")),
   qr_code: z.string().optional(),
+  qr_token: z.string().optional(),
 });
 
 export type MemberInput = z.infer<typeof memberSchema>;

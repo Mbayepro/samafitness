@@ -1,11 +1,9 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { getAuthState } from "@/lib/auth/admin";
 import AdminDashboard from "./AdminDashboard";
 import AccessDenied from "./AccessDenied";
-
-// La page lit la session à chaque requête : pas de validation « instant navigation ».
-export const instant = false;
 
 export default function AdminPage() {
   return (
@@ -17,6 +15,7 @@ export default function AdminPage() {
 
 /** Vérification serveur : session Supabase + présence dans admin_whitelist. */
 async function AdminGate() {
+  await connection();
   const state = await getAuthState();
 
   if (state.status === "anonymous") {

@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Users, X } from "lucide-react";
 import type { Member } from "@/lib/gym-store";
 import type { Lead } from "@/lib/leads-store";
 import MemberBadgeCardModal from "./MemberBadgeCardModal";
 import GymRelancesTab from "./GymRelancesTab";
 import LeadsTab from "./LeadsTab";
 import { formatSenegalPhoneForWhatsApp } from "@/lib/whatsapp";
+import { formatAdminDate, formatMemberNumber } from "./ui/AdminFormatters";
 
 interface GymMembersTabProps {
   members: Member[];
@@ -24,6 +26,7 @@ interface GymMembersTabProps {
   onRefreshLeads?: () => void;
   onExportLeadsCSV?: () => void;
   onUpdateLeadStatus?: (id: string, status: Lead["status"]) => void;
+  onArchiveBatchLeads?: (ids: string[]) => void;
   onDeleteLead?: (id: string, name: string) => void;
   onStartConvertLead?: (lead: Lead) => void;
 }
@@ -42,6 +45,7 @@ export default function GymMembersTab({
   onRefreshLeads = () => {},
   onExportLeadsCSV = () => {},
   onUpdateLeadStatus = () => {},
+  onArchiveBatchLeads,
   onDeleteLead = () => {},
   onStartConvertLead = () => {},
 }: GymMembersTabProps) {
@@ -150,16 +154,16 @@ export default function GymMembersTab({
         <button
           type="button"
           onClick={() => setSubTab("list")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition flex-shrink-0 ${
+          className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition flex-shrink-0 ${
             subTab === "list"
-              ? "bg-white text-black shadow-md"
-              : "border border-white/10 bg-white/5 text-white/70 hover:border-white/30 hover:text-white"
+              ? "bg-white text-black"
+              : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
           }`}
         >
           <span>Tous les adhérents</span>
           <span
-            className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${
-              subTab === "list" ? "bg-black text-white" : "bg-white/10 text-white"
+            className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
+              subTab === "list" ? "bg-black/20 text-black" : "bg-white/10 text-white/70"
             }`}
           >
             {members.length}
@@ -169,17 +173,17 @@ export default function GymMembersTab({
         <button
           type="button"
           onClick={() => setSubTab("relances")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition flex-shrink-0 ${
+          className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition flex-shrink-0 ${
             subTab === "relances"
-              ? "bg-amber-400 text-black shadow-md shadow-amber-400/20"
-              : "border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:border-amber-400"
+              ? "bg-amber-400 text-black"
+              : "border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20"
           }`}
         >
           <span>Relances</span>
           {relancesCount > 0 && (
             <span
-              className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${
-                subTab === "relances" ? "bg-black text-amber-400" : "bg-amber-400/20 text-amber-300"
+              className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                subTab === "relances" ? "bg-black/20 text-black" : "bg-amber-400/20 text-amber-300"
               }`}
             >
               {relancesCount}
@@ -190,17 +194,17 @@ export default function GymMembersTab({
         <button
           type="button"
           onClick={() => setSubTab("leads")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition flex-shrink-0 ${
+          className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition flex-shrink-0 ${
             subTab === "leads"
-              ? "bg-cyan-400 text-black shadow-md shadow-cyan-400/20"
-              : "border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:border-cyan-400"
+              ? "bg-cyan-400 text-black"
+              : "border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
           }`}
         >
           <span>Demandes Web</span>
           {leads.length > 0 && (
             <span
-              className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${
-                subTab === "leads" ? "bg-black text-cyan-400" : "bg-cyan-400/20 text-cyan-300"
+              className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                subTab === "leads" ? "bg-black/20 text-black" : "bg-cyan-400/20 text-cyan-300"
               }`}
             >
               {leads.length}
@@ -226,6 +230,7 @@ export default function GymMembersTab({
           onRefresh={onRefreshLeads}
           onExportCSV={onExportLeadsCSV}
           onUpdateStatus={onUpdateLeadStatus}
+          onArchiveSelected={onArchiveBatchLeads}
           onDeleteLead={onDeleteLead}
           onStartConvertLead={onStartConvertLead}
         />
@@ -233,7 +238,7 @@ export default function GymMembersTab({
 
       {/* ── VUE LISTE DES ADHÉRENTS ──────────────────────────────────── */}
       {subTab === "list" && (
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#121212]">
+        <div className="overflow-hidden rounded-xl border border-white/10 bg-[#121212]">
           {/* ── BARRE D'OUTILS ET RECHERCHE INTÉGRÉE ────────────────── */}
           <div className="flex flex-col gap-3 border-b border-white/10 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
             <div className="flex flex-1 flex-wrap items-center gap-2.5">
@@ -242,13 +247,13 @@ export default function GymMembersTab({
                 placeholder="Rechercher par nom, téléphone..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full sm:w-64 rounded-xl border border-white/10 bg-black/50 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:border-lime-400 focus:outline-none"
+                className="w-full sm:w-64 rounded-md border border-white/10 bg-black/50 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:border-white/30 focus:outline-none"
               />
 
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-xs text-white focus:border-lime-400 focus:outline-none"
+                className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-xs text-white focus:border-white/30 focus:outline-none"
               >
                 <option value="all">Tous les statuts ({members.length})</option>
                 <option value="actif">Actifs ({members.filter((m) => m.status === "actif").length})</option>
@@ -264,19 +269,19 @@ export default function GymMembersTab({
             <button
               type="button"
               onClick={openCreateModal}
-              className="rounded-xl bg-lime-400 px-4 py-2 text-xs font-black uppercase tracking-wider text-black transition hover:bg-lime-300 shadow-md shadow-lime-400/20"
+              className="rounded-md bg-lime-400 px-3.5 py-2 text-xs font-semibold text-black transition hover:bg-lime-300"
             >
-              + Inscrire un Membre
+              + Inscrire un membre
             </button>
           </div>
 
           {/* ── LISTE DES MEMBRES ─────────────────────────────────────── */}
           {filteredMembers.length === 0 ? (
             <div className="p-12 text-center">
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-xs font-black text-white/40">
-                MEM
-              </span>
-              <h3 className="mt-3 text-lg font-bold text-white">Aucun membre trouvé</h3>
+              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-[6px] border border-white/5 bg-white/[0.02] text-zinc-400">
+                <Users size={18} strokeWidth={1.75} />
+              </div>
+              <h3 className="mt-3 text-sm font-medium text-white">Aucun membre trouvé</h3>
               <p className="mt-1 text-xs text-white/50">
                 {search || statusFilter !== "all"
                   ? "Aucun résultat ne correspond à votre filtre."
@@ -287,12 +292,12 @@ export default function GymMembersTab({
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-white/10 bg-black/40 text-[10px] font-black uppercase tracking-wider text-white/50">
-                    <th className="py-4 px-6">Adhérent</th>
-                    <th className="py-4 px-4">Formule</th>
-                    <th className="py-4 px-4">Période</th>
-                    <th className="py-4 px-4">Statut</th>
-                    <th className="py-4 px-6 text-right">Actions</th>
+                  <tr className="border-b border-white/10 bg-black/40 text-xs font-semibold text-white/60">
+                    <th className="py-3 px-6">Adhérent</th>
+                    <th className="py-3 px-4">Formule</th>
+                    <th className="py-3 px-4">Période</th>
+                    <th className="py-3 px-4">Statut</th>
+                    <th className="py-3 px-6 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-xs">
@@ -309,7 +314,12 @@ export default function GymMembersTab({
                     >
                       {/* Nom & Téléphone */}
                       <td className="py-4 px-6">
-                        <div className="font-bold text-white">{member.full_name}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-white">{member.full_name}</span>
+                          <span className="font-mono text-[10px] text-lime-400 font-semibold rounded bg-lime-400/10 border border-lime-400/25 px-1.5 py-0.5">
+                            {formatMemberNumber(member.member_number, member.id)}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="font-mono text-[11px] text-white/50">{member.phone}</span>
                           <a
@@ -337,21 +347,21 @@ export default function GymMembersTab({
                       {/* Période */}
                       <td className="py-4 px-4">
                         <div className="text-[11px] text-white/70">
-                          Du <span className="font-mono">{member.start_date}</span>
+                          Du <span className="font-mono">{formatAdminDate(member.start_date)}</span>
                         </div>
                         <div className="text-[11px] text-white/70">
-                          Au <span className="font-mono font-bold text-white">{member.end_date}</span>
+                          Au <span className="font-mono font-bold text-white">{formatAdminDate(member.end_date)}</span>
                         </div>
                       </td>
 
                       {/* Statut */}
-                      <td className="py-4 px-4">
+                      <td className="py-3.5 px-4">
                         <span
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+                          className={`inline-flex rounded-md px-2 py-0.5 text-[11px] font-medium ${
                             member.status === "actif"
                               ? "bg-lime-400/10 text-lime-400 border border-lime-400/30"
                               : member.status === "expire_bientot"
-                              ? "bg-amber-400/10 text-amber-400 border border-amber-400/30"
+                              ? "bg-amber-400/10 text-amber-300 border border-amber-400/30"
                               : "bg-red-400/10 text-red-400 border border-red-400/30"
                           }`}
                         >
@@ -364,12 +374,12 @@ export default function GymMembersTab({
                       </td>
 
                       {/* Actions */}
-                      <td className="py-4 px-6 text-right">
+                      <td className="py-3.5 px-6 text-right">
                         <div className="inline-flex items-center gap-1.5">
                           {/* Pointer présence */}
                           <button
                             onClick={() => onQuickCheckIn(member.id)}
-                            className="rounded-lg border border-lime-400/30 bg-lime-400/10 px-2.5 py-1.5 text-xs font-bold text-lime-400 hover:bg-lime-400 hover:text-black transition"
+                            className="rounded-md border border-lime-400/30 bg-lime-400/10 px-2.5 py-1 text-xs font-medium text-lime-400 hover:bg-lime-400 hover:text-black transition"
                             title="Enregistrer sa présence"
                           >
                             Pointer
@@ -378,7 +388,7 @@ export default function GymMembersTab({
                           {/* Badge / QR Code */}
                           <button
                             onClick={() => setBadgeMember(member)}
-                            className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-white/90 hover:border-lime-400/50 hover:bg-white/10 transition"
+                            className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-white/90 hover:bg-white/10 transition"
                             title="Voir et imprimer la carte membre avec QR code"
                           >
                             Badge QR
@@ -387,7 +397,7 @@ export default function GymMembersTab({
                           {/* Encaisser / Prolonger */}
                           <button
                             onClick={() => onOpenPaymentForMember(member)}
-                            className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-bold text-emerald-400 hover:bg-emerald-500 hover:text-black transition"
+                            className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 hover:bg-emerald-500 hover:text-black transition"
                             title="Encaisser un paiement / Prolonger"
                           >
                             Paiement
@@ -396,7 +406,7 @@ export default function GymMembersTab({
                           {/* Modifier */}
                           <button
                             onClick={() => openEditModal(member)}
-                            className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-white/70 hover:border-white/30 hover:text-white transition"
+                            className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-white/70 hover:text-white transition"
                             title="Modifier"
                           >
                             Modifier
@@ -410,7 +420,7 @@ export default function GymMembersTab({
                                   onDeleteMember(member.id, member.full_name);
                                 }
                               }}
-                              className="rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 py-1.5 text-xs text-red-400 hover:bg-red-500 hover:text-white transition"
+                              className="rounded-md border border-red-500/20 bg-red-500/5 px-2.5 py-1 text-xs text-red-400 hover:bg-red-500 hover:text-white transition"
                               title="Supprimer le membre"
                             >
                               Supprimer
@@ -437,10 +447,12 @@ export default function GymMembersTab({
                 {editingMember ? "Modifier la fiche membre" : "Inscrire un nouveau membre"}
               </h3>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-white/50 hover:text-white text-lg"
+                aria-label="Fermer"
+                className="rounded-[6px] p-2 text-white/50 hover:bg-white/10 hover:text-white transition"
               >
-                ✕
+                <X size={16} strokeWidth={1.75} />
               </button>
             </div>
 
@@ -584,6 +596,7 @@ export default function GymMembersTab({
         <MemberBadgeCardModal
           member={badgeMember}
           onClose={() => setBadgeMember(null)}
+          onMemberUpdated={(updated) => setBadgeMember(updated)}
         />
       )}
     </div>

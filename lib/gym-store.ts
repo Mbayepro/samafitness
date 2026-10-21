@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createJsonFileStore, mergeById, runSupabase } from "@/lib/sync-store";
@@ -8,6 +9,7 @@ export type PaymentMethod = "Espèces" | "Wave" | "Orange Money";
 
 export interface Member {
   id: string;
+  member_number?: number | null;
   full_name: string;
   phone: string;
   plan_id: string;
@@ -114,6 +116,82 @@ export function computeMemberStatus(endDateStr: string): MemberStatus {
   if (diffDays < 0) return "expire";
   if (diffDays <= 7) return "expire_bientot";
   return "actif";
+}
+
+/**
+ * Génère un jeton QR opaque cryptographique (préfixé sfc_ + 32 caractères hexadécimaux).
+ * Conforme à 'sfc_' || replace(gen_random_uuid()::text, '-', '')
+ */
+export function generateSecureQrToken(): string {
+  return "sfc_" + randomUUID().replace(/-/g, "");
+}
+
+/**
+ * Formate le numéro de membre court au format SF-0001 (stable, jamais recalculé).
+ */
+export function formatMemberNumber(num?: number | null, fallbackId?: string): string {
+  if (typeof num === "number" && num > 0) {
+    return `SF-${String(num).padStart(4, "0")}`;
+  }
+  if (fallbackId && fallbackId.startsWith("mem_demo_")) {
+    const digit = fallbackId.replace("mem_demo_", "");
+    return `SF-${digit.padStart(4, "0")}`;
+  }
+  return "SF-0000";
+}
+
+/**
+ * Retourne la date au format YYYY-MM-DD dans le fuseau horaire de la salle (Africa/Dakar).
+ */
+export function getDakarDate(d: Date | string = new Date()): string {
+  const dateObj = typeof d === "string" ? new Date(d) : d;
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Dakar",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(dateObj);
+}
+
+/**
+ * Retourne l'heure au format HH:MM dans le fuseau horaire de la salle (Africa/Dakar).
+ */
+export function getDakarTime(d: Date | string = new Date()): string {
+  const dateObj = typeof d === "string" ? new Date(d) : d;
+  return new Intl.DateTimeFormat("fr-SN", {
+    timeZone: "Africa/Dakar",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(dateObj);
+}
+
+export interface AttendanceErrorMeta {
+  isExpired?: boolean;
+  isDuplicate?: boolean;
+  memberId?: string;
+  memberName?: string;
+  checkInTime?: string;
+}
+
+export class AttendanceError extends Error {
+  isExpired?: boolean;
+  isDuplicate?: boolean;
+  memberId?: string;
+  memberName?: string;
+  checkInTime?: string;
+
+  constructor(message: string, meta?: AttendanceErrorMeta) {
+    super(message);
+    this.name = "AttendanceError";
+    if (meta) {
+      this.isExpired = meta.isExpired;
+      this.isDuplicate = meta.isDuplicate;
+      this.memberId = meta.memberId;
+      this.memberName = meta.memberName;
+      this.checkInTime = meta.checkInTime;
+    }
+  }
 }
 
 function getInitialLocalData(): LocalGymData {
@@ -296,9 +374,27 @@ export async function saveMember(
 ): Promise<Member> {
   const now = new Date().toISOString();
   const status = computeMemberStatus(data.end_date);
+  const local = readLocalGymData();
+
+  const existingIdx = data.id ? local.members.findIndex((m) => m.id === data.id) : -1;
+  const existing = existingIdx !== -1 ? local.members[existingIdx] : null;
+
+  // Numéro de membre stable (jamais recalculé)
+  let memberNumber = existing?.member_number ?? data.member_number;
+  if (!memberNumber) {
+    const maxNum = local.members.reduce((acc, m) => Math.max(acc, m.member_number || 0), 0);
+    memberNumber = maxNum + 1;
+  }
+
+  // Jeton QR opaque sécurisé (au moins 20 caractères, préfixé sfc_)
+  let qrToken = existing?.qr_token || data.qr_token;
+  if (!qrToken || qrToken.length < 20 || qrToken.startsWith("qr_")) {
+    qrToken = generateSecureQrToken();
+  }
 
   const member: Member = {
     id: data.id || `mem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    member_number: memberNumber,
     full_name: data.full_name,
     phone: data.phone,
     plan_id: data.plan_id,
@@ -306,15 +402,13 @@ export async function saveMember(
     end_date: data.end_date,
     status,
     notes: data.notes || null,
-    qr_token: data.qr_token || `qr_${Math.random().toString(36).substring(2, 12)}`,
-    created_at: now,
+    qr_token: qrToken,
+    created_at: existing ? existing.created_at : now,
     updated_at: now,
   };
 
-  const local = readLocalGymData();
-  const existingIdx = local.members.findIndex((m) => m.id === member.id);
   if (existingIdx !== -1) {
-    local.members[existingIdx] = { ...member, created_at: local.members[existingIdx].created_at };
+    local.members[existingIdx] = member;
   } else {
     local.members.unshift(member);
   }
@@ -330,6 +424,79 @@ export async function saveMember(
   }
 
   return member;
+}
+
+export async function regenerateMemberQrToken(memberId: string): Promise<Member> {
+  const members = await getMembers();
+  const member = members.find((m) => m.id === memberId);
+  if (!member) {
+    throw new Error("Membre introuvable.");
+  }
+
+  const newToken = generateSecureQrToken();
+  const now = new Date().toISOString();
+  const updated: Member = {
+    ...member,
+    qr_token: newToken,
+    updated_at: now,
+  };
+
+  const local = readLocalGymData();
+  const idx = local.members.findIndex((m) => m.id === memberId);
+  if (idx !== -1) {
+    local.members[idx] = updated;
+    writeLocalGymData(local);
+  }
+
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = await createClient();
+      await supabase
+        .from("members")
+        .update({ qr_token: newToken, updated_at: now })
+        .eq("id", memberId);
+    } catch (err) {
+      logger.warn({ err }, "Erreur regenerateMemberQrToken Supabase");
+    }
+  }
+
+  return updated;
+}
+
+export async function getMemberByQrToken(qrToken: string): Promise<Member | null> {
+  const clean = qrToken.trim();
+  if (!clean) return null;
+
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from("members")
+        .select("*")
+        .eq("qr_token", clean)
+        .maybeSingle();
+
+      if (!error && data) {
+        const m = data as Member;
+        return {
+          ...m,
+          status: computeMemberStatus(m.end_date),
+        };
+      }
+    } catch (err) {
+      logger.warn({ err }, "Erreur getMemberByQrToken Supabase");
+    }
+  }
+
+  const local = readLocalGymData();
+  const found = local.members.find((m) => m.qr_token === clean);
+  if (found) {
+    return {
+      ...found,
+      status: computeMemberStatus(found.end_date),
+    };
+  }
+  return null;
 }
 
 export async function deleteMember(id: string): Promise<boolean> {
@@ -519,22 +686,59 @@ export async function recordAttendance(
   memberId: string,
   recordedBy = "Admin",
   method: "manuel" | "qr_code" = "manuel"
-): Promise<{ attendance: Attendance; isExpired: boolean; memberName: string }> {
+): Promise<{ attendance: Attendance; isExpired: boolean; memberName: string; member: Member }> {
   const members = await getMembers();
   const member = members.find((m) => m.id === memberId);
-  const memberName = member?.full_name || "Membre inconnu";
-  const isExpired = member ? member.status === "expire" : false;
+  if (!member) {
+    throw new AttendanceError("Membre introuvable.");
+  }
 
-  const now = new Date().toISOString();
+  // 1. Refus strict si l'abonnement est expiré
+  if (member.status === "expire") {
+    const [y, m, d] = (member.end_date || "").split("-");
+    const formattedEnd = y && m && d ? `${d}/${m}/${y}` : member.end_date;
+    throw new AttendanceError(
+      `Accès refusé : l'abonnement de ${member.full_name} a expiré le ${formattedEnd}. Renouvellement requis avant tout accès.`,
+      {
+        isExpired: true,
+        memberId: member.id,
+        memberName: member.full_name,
+      }
+    );
+  }
+
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const todayDakar = getDakarDate(now);
+
+  // 2. Protection stricte contre le doublon du jour calendaire (Africa/Dakar)
+  const existingAttendances = await getAttendances();
+  const existingToday = existingAttendances.find(
+    (a) => a.member_id === memberId && getDakarDate(a.checked_in_at) === todayDakar
+  );
+
+  if (existingToday) {
+    const timeStr = getDakarTime(existingToday.checked_in_at);
+    throw new AttendanceError(
+      `Pointage refusé : ${member.full_name} a déjà été pointé aujourd'hui à ${timeStr}.`,
+      {
+        isDuplicate: true,
+        memberId: member.id,
+        memberName: member.full_name,
+        checkInTime: timeStr,
+      }
+    );
+  }
+
   const attendance: Attendance = {
     id: `att_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     member_id: memberId,
-    checked_in_at: now,
+    checked_in_at: nowIso,
     recorded_by: recordedBy,
     method,
-    member_name: memberName,
-    member_phone: member?.phone,
-    member_status: member?.status || "actif",
+    member_name: member.full_name,
+    member_phone: member.phone,
+    member_status: member.status,
   };
 
   const local = readLocalGymData();
@@ -544,19 +748,31 @@ export async function recordAttendance(
   if (isSupabaseConfigured()) {
     try {
       const supabase = await createClient();
-      await supabase.from("attendances").insert([{
+      const { error } = await supabase.from("attendances").insert([{
         id: attendance.id,
         member_id: attendance.member_id,
         checked_in_at: attendance.checked_in_at,
         recorded_by: attendance.recorded_by,
         method: attendance.method,
       }]);
+
+      if (error && (error.code === "23505" || error.message?.includes("uq_attendances_member_dakar_day"))) {
+        throw new AttendanceError(
+          `Pointage refusé : ${member.full_name} a déjà été pointé aujourd'hui.`,
+          {
+            isDuplicate: true,
+            memberId: member.id,
+            memberName: member.full_name,
+          }
+        );
+      }
     } catch (err) {
+      if (err instanceof AttendanceError) throw err;
       logger.warn({ err }, "Erreur recordAttendance Supabase");
     }
   }
 
-  return { attendance, isExpired, memberName };
+  return { attendance, isExpired: false, memberName: member.full_name, member };
 }
 
 // ─────────────────────────────────────────────────────────────

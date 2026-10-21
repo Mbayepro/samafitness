@@ -57,7 +57,7 @@ export default function FAQ() {
                   <motion.span
                     animate={{
                       rotate: isOpen ? 180 : 0,
-                      backgroundColor: isOpen ? "#a3e635" : "transparent",
+                      backgroundColor: isOpen ? "#a3e635" : "rgba(0, 0, 0, 0)",
                       color: isOpen ? "#000000" : "#ffffff",
                       borderColor: isOpen ? "#a3e635" : "rgba(255, 255, 255, 0.2)",
                     }}

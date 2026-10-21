@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { X } from "lucide-react";
 import type { Lead } from "@/lib/leads-store";
 import type { PaymentMethod } from "@/lib/gym-store";
 
@@ -78,8 +79,13 @@ export default function ConvertLeadModal({
               Transformer en Membre du Club
             </h3>
           </div>
-          <button onClick={onClose} className="text-white/50 hover:text-white text-lg">
-            ✕
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-[6px] p-2 text-white/40 hover:bg-white/10 hover:text-white transition"
+            aria-label="Fermer"
+          >
+            <X size={16} strokeWidth={1.75} />
           </button>
         </div>
 

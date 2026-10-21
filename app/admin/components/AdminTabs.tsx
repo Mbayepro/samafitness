@@ -14,12 +14,12 @@ interface AdminTabsProps {
 }
 
 function tabClass(active: boolean) {
-  const base = "flex-shrink-0 whitespace-nowrap min-h-[38px] transition-all ";
+  const base = "flex-shrink-0 whitespace-nowrap min-h-[36px] transition-colors rounded-md px-3.5 py-1.5 text-xs ";
   return (
     base +
     (active
-      ? "bg-lime-400 text-black shadow-md shadow-lime-400/20 font-bold"
-      : "border border-white/10 bg-white/5 text-white/70 hover:border-lime-400/40 hover:text-white")
+      ? "bg-lime-400 text-black font-semibold"
+      : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white")
   );
 }
 
@@ -47,8 +47,6 @@ export default function AdminTabs({
     activeTab === "faq" ||
     activeTab === "supabase";
 
-  const totalMemberAlerts = relancesCount + leadsCount;
-
   return (
     <nav
       aria-label="Navigation du tableau de bord"
@@ -60,7 +58,7 @@ export default function AdminTabs({
           type="button"
           onClick={() => onSelectTab("overview")}
           aria-current={isOverview ? "page" : undefined}
-          className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 ${tabClass(isOverview)}`}
+          className={`flex items-center gap-1.5 ${tabClass(isOverview)}`}
         >
           <span>Accueil</span>
         </button>
@@ -70,22 +68,16 @@ export default function AdminTabs({
           type="button"
           onClick={() => onSelectTab("members")}
           aria-current={isMembers ? "page" : undefined}
-          className={`flex items-center gap-2 rounded-xl px-3.5 py-2 ${tabClass(isMembers)}`}
+          className={`flex items-center gap-2 ${tabClass(isMembers)}`}
         >
           <span>Membres</span>
           <span
-            className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${
-              isMembers ? "bg-black text-lime-400" : "bg-white/10 text-white"
+            className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
+              isMembers ? "bg-black/20 text-black" : "bg-white/10 text-white/70"
             }`}
           >
             {membersCount}
           </span>
-          {totalMemberAlerts > 0 && !isMembers && (
-            <span
-              className="flex h-2 w-2 rounded-full bg-amber-400"
-              title={`${totalMemberAlerts} relance(s) ou demande(s)`}
-            />
-          )}
         </button>
 
         {/* 3. Présences */}
@@ -93,13 +85,13 @@ export default function AdminTabs({
           type="button"
           onClick={() => onSelectTab("attendances")}
           aria-current={isAttendances ? "page" : undefined}
-          className={`flex items-center gap-2 rounded-xl px-3.5 py-2 ${tabClass(isAttendances)}`}
+          className={`flex items-center gap-2 ${tabClass(isAttendances)}`}
         >
           <span>Présences</span>
           {todayAttendances > 0 && (
             <span
-              className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${
-                isAttendances ? "bg-black text-lime-400" : "bg-cyan-400/20 text-cyan-300"
+              className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                isAttendances ? "bg-black/20 text-black" : "bg-white/10 text-white/70"
               }`}
             >
               {todayAttendances}
@@ -112,7 +104,7 @@ export default function AdminTabs({
           type="button"
           onClick={() => onSelectTab("finances")}
           aria-current={isFinances ? "page" : undefined}
-          className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 ${tabClass(isFinances)}`}
+          className={`flex items-center gap-1.5 ${tabClass(isFinances)}`}
         >
           <span>Finances</span>
         </button>
@@ -123,15 +115,9 @@ export default function AdminTabs({
             type="button"
             onClick={() => onSelectTab("settings")}
             aria-current={isSettings ? "page" : undefined}
-            className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 ${tabClass(isSettings)}`}
+            className={`flex items-center gap-1.5 ${tabClass(isSettings)}`}
           >
             <span>Paramètres</span>
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${
-                supabaseConfigured ? "bg-emerald-400" : "bg-amber-400"
-              }`}
-              title={supabaseConfigured ? "Supabase connecté" : "Supabase hors-ligne"}
-            />
           </button>
         )}
       </div>
