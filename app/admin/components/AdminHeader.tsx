@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { ScanLine, UserPlus, CreditCard } from "lucide-react";
 import type { AdminContext } from "@/lib/auth/admin";
 import { usePwaInstall } from "@/lib/pwa";
 
@@ -10,6 +11,9 @@ interface AdminHeaderProps {
   isSuperAdmin: boolean;
   onOpenPassword: () => void;
   onLogout: () => void;
+  onOpenScanner?: () => void;
+  onOpenNewMember?: () => void;
+  onOpenNewPayment?: () => void;
 }
 
 export default function AdminHeader({
@@ -17,6 +21,9 @@ export default function AdminHeader({
   isSuperAdmin,
   onOpenPassword,
   onLogout,
+  onOpenScanner,
+  onOpenNewMember,
+  onOpenNewPayment,
 }: AdminHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -72,8 +79,45 @@ export default function AdminHeader({
           )}
         </div>
 
-        {/* Menu profil déroulant */}
-        <div className="relative" ref={menuRef}>
+        {/* Actions Globales 1-Clic + Menu profil déroulant */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
+          {onOpenScanner && (
+            <button
+              type="button"
+              onClick={onOpenScanner}
+              className="inline-flex items-center gap-1.5 rounded-full bg-lime-400 px-3 py-1.5 text-xs font-bold text-black transition hover:bg-lime-300 shadow-sm"
+              title="Scanner une carte QR Membre"
+            >
+              <ScanLine size={14} strokeWidth={2.2} />
+              <span>Scanner QR</span>
+            </button>
+          )}
+
+          {onOpenNewPayment && (
+            <button
+              type="button"
+              onClick={onOpenNewPayment}
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500 hover:text-black"
+              title="Encaisser un règlement"
+            >
+              <CreditCard size={13} />
+              <span>Encaisser</span>
+            </button>
+          )}
+
+          {onOpenNewMember && (
+            <button
+              type="button"
+              onClick={onOpenNewMember}
+              className="hidden md:inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/10"
+              title="Inscrire un nouvel adhérent"
+            >
+              <UserPlus size={13} />
+              <span>+ Membre</span>
+            </button>
+          )}
+
+          <div className="relative" ref={menuRef}>
           <button
             type="button"
             onClick={() => setIsMenuOpen((prev) => !prev)}
@@ -192,6 +236,7 @@ export default function AdminHeader({
               </div>
             </div>
           )}
+          </div>
         </div>
       </div>
     </header>

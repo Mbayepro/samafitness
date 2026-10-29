@@ -8,7 +8,7 @@ import {
   recordPayment,
   getAttendances,
   recordAttendance,
-  getGymStats,
+  computeGymStatsFromData,
   getExpenses,
   recordExpense,
   softDeleteExpense,
@@ -79,13 +79,13 @@ export interface GymDataResult {
 export async function fetchGymDataAction(): Promise<ActionResult<GymDataResult>> {
   return guarded("receptionist", async () => {
     const admin = await requireAdmin("receptionist");
-    const [members, payments, attendances, stats, expenses] = await Promise.all([
+    const [members, payments, attendances, expenses] = await Promise.all([
       getMembers(),
       getPayments(),
       getAttendances(),
-      getGymStats(),
       admin.role === "super_admin" ? getExpenses().catch(() => []) : Promise.resolve([]),
     ]);
+    const stats = computeGymStatsFromData(members, payments, attendances, expenses);
     return { members, payments, attendances, stats, expenses };
   });
 }

@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { CalendarCheck } from "lucide-react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { CalendarCheck, ScanLine, X, CreditCard } from "lucide-react";
 import type { Attendance, Member } from "@/lib/gym-store";
-import QRScannerModal from "./QRScannerModal";
-import { formatAdminDate } from "./ui/AdminFormatters";
+import { formatAdminDate, formatMemberNumber } from "./ui/AdminFormatters";
 
 interface GymAttendancesTabProps {
   attendances: Attendance[];
   members: Member[];
-  onRecordAttendance: (memberId: string) => Promise<void>;
+  onRecordAttendance: (memberId: string) => Promise<boolean | void>;
   onOpenPaymentForMember: (member: Member) => void;
+  onOpenScannerModal?: () => void;
   showFeedback: (type: "success" | "error", text: string) => void;
 }
 
@@ -19,34 +19,56 @@ export default function GymAttendancesTab({
   members,
   onRecordAttendance,
   onOpenPaymentForMember,
-  showFeedback,
+  onOpenScannerModal,
 }: GymAttendancesTabProps) {
-  const [selectedMemberId, setSelectedMemberId] = useState("");
+  // Autocomplétion de pointage
+  const [memberQuery, setMemberQuery] = useState("");
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
   const [searchFilter, setSearchFilter] = useState("");
   const [dateFilter, setDateFilter] = useState<"today" | "week" | "all">("today");
-  const [submitting, setSubmitting] = useState(false);
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
-  const selectedMember = members.find((m) => m.id === selectedMemberId);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  const matchingMembers = useMemo(() => {
+    const q = memberQuery.trim().toLowerCase();
+    if (!q) return members.slice(0, 8);
+    const digits = q.replace(/\D/g, "");
+    return members
+      .filter((m) => {
+        const numFormatted = formatMemberNumber(m.member_number, m.id).toLowerCase();
+        return (
+          m.full_name.toLowerCase().includes(q) ||
+          numFormatted.includes(q) ||
+          (digits.length > 0 && m.phone.replace(/\D/g, "").includes(digits))
+        );
+      })
+      .slice(0, 8);
+  }, [members, memberQuery]);
 
   const handleCheckIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedMemberId) return;
+    if (!selectedMember || submitting || selectedMember.status === "expire") return;
 
     setSubmitting(true);
     try {
-      await onRecordAttendance(selectedMemberId);
-      if (selectedMember?.status === "expire") {
-        showFeedback(
-          "error",
-          `Attention : l'abonnement de ${selectedMember.full_name} est expiré !`
-        );
-      } else {
-        showFeedback("success", `Présence de ${selectedMember?.full_name} enregistrée !`);
+      const ok = await onRecordAttendance(selectedMember.id);
+      if (ok !== false) {
+        setSelectedMember(null);
+        setMemberQuery("");
       }
-      setSelectedMemberId("");
-    } catch {
-      showFeedback("error", "Erreur lors du pointage de la présence.");
     } finally {
       setSubmitting(false);
     }
@@ -80,8 +102,8 @@ export default function GymAttendancesTab({
   }, [attendances, searchFilter, dateFilter, currentDate]);
 
   // Fréquentation des 7 derniers jours
-  const daysOfWeek = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
   const last7Days = useMemo(() => {
+    const daysOfWeek = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date();
       d.setDate(d.getDate() - (6 - i));
@@ -141,46 +163,100 @@ export default function GymAttendancesTab({
         </div>
       </div>
 
-      {/* ── MODULE POINTAGE RAPIDE AVEC VÉRIFICATION D'EXPIRATION ── */}
+      {/* ── MODULE POINTAGE RAPIDE AVEC RECHERCHE INTELLIGENTE ── */}
       <div className="rounded-2xl border border-white/10 bg-[#121212] p-4 sm:p-5">
         <h2 className="text-sm font-black uppercase text-white tracking-wide">
           Enregistrer une entrée à la salle
         </h2>
         <p className="mt-0.5 text-xs text-white/50">
-          Sélectionnez le membre pour vérifier la validité de son forfait et pointer sa présence.
+          Recherchez l&apos;adhérent par nom, téléphone ou numéro de membre (ex: SF-0001), ou scannez son QR code.
         </p>
 
         <form onSubmit={handleCheckIn} className="mt-4 space-y-3">
           <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-            <select
-              value={selectedMemberId}
-              onChange={(e) => setSelectedMemberId(e.target.value)}
-              className="flex-1 rounded-xl border border-white/15 bg-black/60 px-3.5 py-2.5 text-xs text-white focus:border-lime-400 focus:outline-none"
-            >
-              <option value="">-- Choisir un membre adhérent --</option>
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.full_name} ({m.phone}) — Fin : {m.end_date}{" "}
-                  {m.status === "expire" ? "[EXPIRÉ]" : m.status === "expire_bientot" ? "[EXPIRE BIENTÔT]" : "[ACTIF]"}
-                </option>
-              ))}
-            </select>
+            <div className="relative flex-1" ref={dropdownRef}>
+              <input
+                type="text"
+                value={memberQuery}
+                onChange={(e) => {
+                  setMemberQuery(e.target.value);
+                  if (selectedMember && e.target.value !== selectedMember.full_name) {
+                    setSelectedMember(null);
+                  }
+                  setIsDropdownOpen(true);
+                }}
+                onFocus={() => setIsDropdownOpen(true)}
+                placeholder="Tapez un nom, numéro de téléphone ou SF-0001..."
+                className="w-full rounded-xl border border-white/15 bg-black/60 px-3.5 py-2.5 pr-8 text-xs text-white placeholder-white/30 focus:border-lime-400 focus:outline-none"
+              />
+              {memberQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMemberQuery("");
+                    setSelectedMember(null);
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white p-1"
+                  aria-label="Effacer"
+                >
+                  <X size={14} />
+                </button>
+              )}
+
+              {isDropdownOpen && matchingMembers.length > 0 && (
+                <ul className="absolute left-0 right-0 z-40 mt-1 max-h-60 overflow-y-auto rounded-xl border border-white/15 bg-[#181818] p-1.5 shadow-2xl">
+                  {matchingMembers.map((m) => (
+                    <li
+                      key={m.id}
+                      onMouseDown={() => {
+                        setSelectedMember(m);
+                        setMemberQuery(m.full_name);
+                        setIsDropdownOpen(false);
+                      }}
+                      className="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-xs hover:bg-white/10"
+                    >
+                      <div>
+                        <span className="font-bold text-white">{m.full_name}</span>{" "}
+                        <span className="font-mono text-[10px] text-lime-400 ml-1">
+                          {formatMemberNumber(m.member_number, m.id)}
+                        </span>
+                        <span className="block text-[11px] font-mono text-white/50">{m.phone}</span>
+                      </div>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase ${
+                          m.status === "expire"
+                            ? "bg-red-500/20 text-red-400"
+                            : m.status === "expire_bientot"
+                            ? "bg-amber-500/20 text-amber-300"
+                            : "bg-lime-400/15 text-lime-400"
+                        }`}
+                      >
+                        {m.status === "expire" ? "Expiré" : m.status === "expire_bientot" ? "Bientôt" : "Actif"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
             <button
               type="submit"
-              disabled={!selectedMemberId || submitting}
+              disabled={!selectedMember || submitting || selectedMember.status === "expire"}
               className="rounded-xl bg-lime-400 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-black hover:bg-lime-300 disabled:opacity-40 transition shadow-md shadow-lime-400/20"
             >
               {submitting ? "Pointage..." : "Valider l'entrée"}
             </button>
 
-            <button
-              type="button"
-              onClick={() => setIsScannerOpen(true)}
-              className="flex items-center justify-center gap-2 rounded-xl border border-lime-400/50 bg-lime-400/10 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-lime-400 hover:bg-lime-400 hover:text-black transition"
-            >
-              <span>Scanner QR</span>
-            </button>
+            {onOpenScannerModal && (
+              <button
+                type="button"
+                onClick={onOpenScannerModal}
+                className="flex items-center justify-center gap-2 rounded-xl border border-lime-400/50 bg-lime-400/10 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-lime-400 hover:bg-lime-400 hover:text-black transition"
+              >
+                <ScanLine size={15} />
+                <span>Scanner QR</span>
+              </button>
+            )}
           </div>
 
           {/* ALERTE MEMBRE SÉLECTIONNÉ */}
@@ -206,7 +282,7 @@ export default function GymAttendancesTab({
                     {selectedMember.status === "expire_bientot" &&
                       `Attention : l'abonnement expire le ${formatAdminDate(selectedMember.end_date)} (sous 7 jours).`}
                     {selectedMember.status === "expire" &&
-                      `ABONNEMENT EXPIRÉ depuis le ${formatAdminDate(selectedMember.end_date)} ! Encaissement requis.`}
+                      `ABONNEMENT EXPIRÉ depuis le ${formatAdminDate(selectedMember.end_date)} ! Encaissement requis avant accès.`}
                   </p>
                 </div>
               </div>
@@ -215,9 +291,10 @@ export default function GymAttendancesTab({
                 <button
                   type="button"
                   onClick={() => onOpenPaymentForMember(selectedMember)}
-                  className="rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-black hover:bg-gray-100 transition"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-bold text-black hover:bg-emerald-400 transition"
                 >
-                  Renouveler maintenant
+                  <CreditCard size={13} />
+                  <span>Renouveler maintenant</span>
                 </button>
               )}
             </div>
@@ -352,18 +429,6 @@ export default function GymAttendancesTab({
           </div>
         )}
       </div>
-
-      {/* QR Code Scanner / Camera / Douchette Modal */}
-      {isScannerOpen && (
-        <QRScannerModal
-          onClose={() => setIsScannerOpen(false)}
-          showFeedback={showFeedback}
-          onOpenPaymentModal={(memberId) => {
-            const found = members.find((m) => m.id === memberId);
-            if (found) onOpenPaymentForMember(found);
-          }}
-        />
-      )}
     </div>
   );
 }

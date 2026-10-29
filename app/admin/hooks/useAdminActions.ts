@@ -19,7 +19,7 @@ import {
 } from "@/app/actions/gym-actions";
 import type { Lead } from "@/lib/leads-store";
 import type { SiteContentType } from "@/lib/content-store";
-import type { Member, PaymentMethod, ExpenseCategory, Expense } from "@/lib/gym-store";
+import type { Member, PaymentMethod, ExpenseCategory } from "@/lib/gym-store";
 import type { FeedbackKind } from "@/app/admin/admin-types";
 
 interface UseAdminActionsParams {
@@ -132,11 +132,11 @@ export function useAdminActions({
     await loadData();
   };
 
-  const handleQuickCheckIn = async (memberId: string) => {
+  const handleQuickCheckIn = async (memberId: string): Promise<boolean> => {
     const res = await recordAttendanceAction(memberId);
     if (!res.success) {
       showFeedback("error", res.error);
-      return;
+      return false;
     }
     if (res.isExpired) {
       showFeedback("error", `Attention : l'abonnement de ${res.memberName} est expiré !`);
@@ -144,6 +144,7 @@ export function useAdminActions({
       showFeedback("success", `Présence de ${res.memberName} enregistrée avec succès.`);
     }
     await loadData();
+    return true;
   };
 
   const handleRecordPayment = async (data: {

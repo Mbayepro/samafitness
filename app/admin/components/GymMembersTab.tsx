@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Users, X } from "lucide-react";
-import type { Member } from "@/lib/gym-store";
+import { useState } from "react";
+import { Users, X, Eye, QrCode, CreditCard, UserCheck } from "lucide-react";
+import type { Member, Payment, Attendance } from "@/lib/gym-store";
 import type { Lead } from "@/lib/leads-store";
 import MemberBadgeCardModal from "./MemberBadgeCardModal";
+import MemberDetailsDrawer from "./MemberDetailsDrawer";
 import GymRelancesTab from "./GymRelancesTab";
 import LeadsTab from "./LeadsTab";
 import { formatSenegalPhoneForWhatsApp } from "@/lib/whatsapp";
@@ -12,15 +13,18 @@ import { formatAdminDate, formatMemberNumber } from "./ui/AdminFormatters";
 
 interface GymMembersTabProps {
   members: Member[];
+  payments?: Payment[];
+  attendances?: Attendance[];
   isSuperAdmin: boolean;
   onSaveMember: (
     data: Omit<Member, "id" | "status" | "created_at" | "updated_at"> & { id?: string }
   ) => Promise<void>;
   onDeleteMember: (id: string, name: string) => Promise<void>;
-  onQuickCheckIn: (memberId: string) => Promise<void>;
+  onQuickCheckIn: (memberId: string) => Promise<boolean | void>;
   onOpenPaymentForMember: (member: Member) => void;
   showFeedback: (type: "success" | "error", text: string) => void;
   initialSubTab?: "list" | "relances" | "leads";
+  defaultOpenCreate?: boolean;
   leads?: Lead[];
   isPending?: boolean;
   onRefreshLeads?: () => void;
@@ -33,6 +37,8 @@ interface GymMembersTabProps {
 
 export default function GymMembersTab({
   members,
+  payments = [],
+  attendances = [],
   isSuperAdmin,
   onSaveMember,
   onDeleteMember,
@@ -40,6 +46,7 @@ export default function GymMembersTab({
   onOpenPaymentForMember,
   showFeedback,
   initialSubTab = "list",
+  defaultOpenCreate = false,
   leads = [],
   isPending = false,
   onRefreshLeads = () => {},
@@ -49,32 +56,33 @@ export default function GymMembersTab({
   onDeleteLead = () => {},
   onStartConvertLead = () => {},
 }: GymMembersTabProps) {
-  const [subTab, setSubTab] = useState<"list" | "relances" | "leads">(initialSubTab);
-
-  useEffect(() => {
-    setSubTab(initialSubTab);
-  }, [initialSubTab]);
+  const [subTab] = useState<"list" | "relances" | "leads">(initialSubTab);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(defaultOpenCreate);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [badgeMember, setBadgeMember] = useState<Member | null>(null);
+  const [drawerMember, setDrawerMember] = useState<Member | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Form State
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("+221 ");
-  const [planId, setPlanId] = useState("muscu-cardio");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [planId, setPlanId] = useState("mensuel");
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [endDate, setEndDate] = useState(() => {
+    const nextMonth = new Date();
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    return nextMonth.toISOString().split("T")[0];
+  });
   const [notes, setNotes] = useState("");
 
   const openCreateModal = () => {
     setEditingMember(null);
     setFullName("");
     setPhone("+221 ");
-    setPlanId("muscu-cardio");
+    setPlanId("mensuel");
 
     const today = new Date();
     const todayStr = today.toISOString().split("T")[0];
@@ -136,83 +144,24 @@ export default function GymMembersTab({
   const filteredMembers = members.filter((m) => {
     const matchesStatus =
       statusFilter === "all" ? true : m.status.toLowerCase() === statusFilter.toLowerCase();
+    const q = search.trim().toLowerCase();
+    const numFormatted = formatMemberNumber(m.member_number, m.id).toLowerCase();
     const matchesSearch =
-      m.full_name.toLowerCase().includes(search.toLowerCase()) ||
+      !q ||
+      m.full_name.toLowerCase().includes(q) ||
+      numFormatted.includes(q) ||
       m.phone.includes(search) ||
-      (m.notes && m.notes.toLowerCase().includes(search.toLowerCase()));
+      (m.notes && m.notes.toLowerCase().includes(q));
     return matchesStatus && matchesSearch;
   });
 
-  const relancesCount = members.filter(
-    (m) => m.status === "expire" || m.status === "expire_bientot"
-  ).length;
+  // Synchroniser le membre du tiroir si les données ont changé
+  const activeDrawerMember = drawerMember
+    ? members.find((m) => m.id === drawerMember.id) || drawerMember
+    : null;
 
   return (
     <div className="space-y-6">
-      {/* ── SOUS-ONGLETS MEMBRES (Tous / Relances / Demandes Web) ── */}
-      <div className="flex items-center gap-2 border-b border-white/10 pb-4 overflow-x-auto [scrollbar-width:none]">
-        <button
-          type="button"
-          onClick={() => setSubTab("list")}
-          className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition flex-shrink-0 ${
-            subTab === "list"
-              ? "bg-white text-black"
-              : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
-          }`}
-        >
-          <span>Tous les adhérents</span>
-          <span
-            className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
-              subTab === "list" ? "bg-black/20 text-black" : "bg-white/10 text-white/70"
-            }`}
-          >
-            {members.length}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setSubTab("relances")}
-          className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition flex-shrink-0 ${
-            subTab === "relances"
-              ? "bg-amber-400 text-black"
-              : "border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20"
-          }`}
-        >
-          <span>Relances</span>
-          {relancesCount > 0 && (
-            <span
-              className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
-                subTab === "relances" ? "bg-black/20 text-black" : "bg-amber-400/20 text-amber-300"
-              }`}
-            >
-              {relancesCount}
-            </span>
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setSubTab("leads")}
-          className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition flex-shrink-0 ${
-            subTab === "leads"
-              ? "bg-cyan-400 text-black"
-              : "border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
-          }`}
-        >
-          <span>Demandes Web</span>
-          {leads.length > 0 && (
-            <span
-              className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
-                subTab === "leads" ? "bg-black/20 text-black" : "bg-cyan-400/20 text-cyan-300"
-              }`}
-            >
-              {leads.length}
-            </span>
-          )}
-        </button>
-      </div>
-
       {/* ── VUE RELANCES ────────────────────────────────────────────── */}
       {subTab === "relances" && (
         <GymRelancesTab
@@ -238,38 +187,69 @@ export default function GymMembersTab({
 
       {/* ── VUE LISTE DES ADHÉRENTS ──────────────────────────────────── */}
       {subTab === "list" && (
-        <div className="overflow-hidden rounded-xl border border-white/10 bg-[#121212]">
-          {/* ── BARRE D'OUTILS ET RECHERCHE INTÉGRÉE ────────────────── */}
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#121212]">
+          {/* ── BARRE D'OUTILS ET FILTRES RAPIDES PAR STATUT ─────────── */}
           <div className="flex flex-col gap-3 border-b border-white/10 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
             <div className="flex flex-1 flex-wrap items-center gap-2.5">
               <input
                 type="text"
-                placeholder="Rechercher par nom, téléphone..."
+                placeholder="Rechercher par nom, téléphone ou SF-0001..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full sm:w-64 rounded-md border border-white/10 bg-black/50 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:border-white/30 focus:outline-none"
+                className="w-full sm:w-64 rounded-xl border border-white/10 bg-black/50 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:border-lime-400 focus:outline-none"
               />
 
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-xs text-white focus:border-white/30 focus:outline-none"
-              >
-                <option value="all">Tous les statuts ({members.length})</option>
-                <option value="actif">Actifs ({members.filter((m) => m.status === "actif").length})</option>
-                <option value="expire_bientot">
-                  Expire bientôt ({members.filter((m) => m.status === "expire_bientot").length})
-                </option>
-                <option value="expire">
+              {/* Boutons filtres statuts directs */}
+              <div className="flex flex-wrap items-center gap-1 rounded-xl border border-white/10 bg-black/50 p-1">
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("all")}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                    statusFilter === "all" ? "bg-white text-black" : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  Tous ({members.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("actif")}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                    statusFilter === "actif"
+                      ? "bg-lime-400 text-black"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  Actifs ({members.filter((m) => m.status === "actif").length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("expire_bientot")}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                    statusFilter === "expire_bientot"
+                      ? "bg-amber-400 text-black"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  Sous 7j ({members.filter((m) => m.status === "expire_bientot").length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("expire")}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                    statusFilter === "expire"
+                      ? "bg-red-500 text-white"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
                   Expirés ({members.filter((m) => m.status === "expire").length})
-                </option>
-              </select>
+                </button>
+              </div>
             </div>
 
             <button
               type="button"
               onClick={openCreateModal}
-              className="rounded-md bg-lime-400 px-3.5 py-2 text-xs font-semibold text-black transition hover:bg-lime-300"
+              className="rounded-xl bg-lime-400 px-4 py-2 text-xs font-bold text-black transition hover:bg-lime-300"
             >
               + Inscrire un membre
             </button>
@@ -278,14 +258,14 @@ export default function GymMembersTab({
           {/* ── LISTE DES MEMBRES ─────────────────────────────────────── */}
           {filteredMembers.length === 0 ? (
             <div className="p-12 text-center">
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-[6px] border border-white/5 bg-white/[0.02] text-zinc-400">
+              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg border border-white/5 bg-white/[0.02] text-zinc-400">
                 <Users size={18} strokeWidth={1.75} />
               </div>
               <h3 className="mt-3 text-sm font-medium text-white">Aucun membre trouvé</h3>
               <p className="mt-1 text-xs text-white/50">
                 {search || statusFilter !== "all"
                   ? "Aucun résultat ne correspond à votre filtre."
-                  : "Cliquez sur « Inscrire un Membre » pour ajouter votre premier adhérent."}
+                  : "Cliquez sur « + Inscrire un membre » pour ajouter votre premier adhérent."}
               </p>
             </div>
           ) : (
@@ -293,11 +273,11 @@ export default function GymMembersTab({
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-white/10 bg-black/40 text-xs font-semibold text-white/60">
-                    <th className="py-3 px-6">Adhérent</th>
+                    <th className="py-3 px-5">Adhérent</th>
                     <th className="py-3 px-4">Formule</th>
-                    <th className="py-3 px-4">Période</th>
+                    <th className="py-3 px-4">Échéance</th>
                     <th className="py-3 px-4">Statut</th>
-                    <th className="py-3 px-6 text-right">Actions</th>
+                    <th className="py-3 px-5 text-right">Actions rapides</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-xs">
@@ -306,137 +286,154 @@ export default function GymMembersTab({
                     const whatsappMsg = encodeURIComponent(
                       `Bonjour ${member.full_name}, c'est Samba Diop de Samba Fitness Ndioum.`
                     );
+                    const isExpired = member.status === "expire";
 
-                  return (
-                    <tr
-                      key={member.id}
-                      className="transition hover:bg-white/[0.02]"
-                    >
-                      {/* Nom & Téléphone */}
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-white">{member.full_name}</span>
-                          <span className="font-mono text-[10px] text-lime-400 font-semibold rounded bg-lime-400/10 border border-lime-400/25 px-1.5 py-0.5">
-                            {formatMemberNumber(member.member_number, member.id)}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="font-mono text-[11px] text-white/50">{member.phone}</span>
-                          <a
-                            href={`https://wa.me/${whatsappNumber}?text=${whatsappMsg}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400 hover:bg-emerald-500 hover:text-black transition"
-                            title="Ouvrir WhatsApp"
+                    return (
+                      <tr
+                        key={member.id}
+                        onClick={() => setDrawerMember(member)}
+                        className="cursor-pointer transition hover:bg-white/[0.03]"
+                      >
+                        {/* Nom & Téléphone */}
+                        <td className="py-3.5 px-5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-white hover:text-lime-400 transition">
+                              {member.full_name}
+                            </span>
+                            <span className="font-mono text-[10px] text-lime-400 font-semibold rounded bg-lime-400/10 border border-lime-400/25 px-1.5 py-0.5">
+                              {formatMemberNumber(member.member_number, member.id)}
+                            </span>
+                          </div>
+                          <div
+                            className="flex items-center gap-2 mt-0.5"
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            WhatsApp
-                          </a>
-                        </div>
-                        {member.notes && (
-                          <p className="mt-1 text-[11px] text-white/40 italic">{member.notes}</p>
-                        )}
-                      </td>
-
-                      {/* Formule */}
-                      <td className="py-4 px-4">
-                        <span className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-white/80 uppercase">
-                          {member.plan_id}
-                        </span>
-                      </td>
-
-                      {/* Période */}
-                      <td className="py-4 px-4">
-                        <div className="text-[11px] text-white/70">
-                          Du <span className="font-mono">{formatAdminDate(member.start_date)}</span>
-                        </div>
-                        <div className="text-[11px] text-white/70">
-                          Au <span className="font-mono font-bold text-white">{formatAdminDate(member.end_date)}</span>
-                        </div>
-                      </td>
-
-                      {/* Statut */}
-                      <td className="py-3.5 px-4">
-                        <span
-                          className={`inline-flex rounded-md px-2 py-0.5 text-[11px] font-medium ${
-                            member.status === "actif"
-                              ? "bg-lime-400/10 text-lime-400 border border-lime-400/30"
-                              : member.status === "expire_bientot"
-                              ? "bg-amber-400/10 text-amber-300 border border-amber-400/30"
-                              : "bg-red-400/10 text-red-400 border border-red-400/30"
-                          }`}
-                        >
-                          {member.status === "actif"
-                            ? "Actif"
-                            : member.status === "expire_bientot"
-                            ? "Expire bientôt"
-                            : "Expiré"}
-                        </span>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="py-3.5 px-6 text-right">
-                        <div className="inline-flex items-center gap-1.5">
-                          {/* Pointer présence */}
-                          <button
-                            onClick={() => onQuickCheckIn(member.id)}
-                            className="rounded-md border border-lime-400/30 bg-lime-400/10 px-2.5 py-1 text-xs font-medium text-lime-400 hover:bg-lime-400 hover:text-black transition"
-                            title="Enregistrer sa présence"
-                          >
-                            Pointer
-                          </button>
-
-                          {/* Badge / QR Code */}
-                          <button
-                            onClick={() => setBadgeMember(member)}
-                            className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-white/90 hover:bg-white/10 transition"
-                            title="Voir et imprimer la carte membre avec QR code"
-                          >
-                            Badge QR
-                          </button>
-
-                          {/* Encaisser / Prolonger */}
-                          <button
-                            onClick={() => onOpenPaymentForMember(member)}
-                            className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 hover:bg-emerald-500 hover:text-black transition"
-                            title="Encaisser un paiement / Prolonger"
-                          >
-                            Paiement
-                          </button>
-
-                          {/* Modifier */}
-                          <button
-                            onClick={() => openEditModal(member)}
-                            className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-white/70 hover:text-white transition"
-                            title="Modifier"
-                          >
-                            Modifier
-                          </button>
-
-                          {/* Supprimer (Super Admin) */}
-                          {isSuperAdmin && (
-                            <button
-                              onClick={() => {
-                                if (confirm(`Supprimer définitivement le membre ${member.full_name} ?`)) {
-                                  onDeleteMember(member.id, member.full_name);
-                                }
-                              }}
-                              className="rounded-md border border-red-500/20 bg-red-500/5 px-2.5 py-1 text-xs text-red-400 hover:bg-red-500 hover:text-white transition"
-                              title="Supprimer le membre"
+                            <span className="font-mono text-[11px] text-white/50">{member.phone}</span>
+                            <a
+                              href={`https://wa.me/${whatsappNumber}?text=${whatsappMsg}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400 hover:bg-emerald-500 hover:text-black transition"
+                              title="Ouvrir WhatsApp"
                             >
-                              Supprimer
+                              WhatsApp
+                            </a>
+                          </div>
+                        </td>
+
+                        {/* Formule */}
+                        <td className="py-3.5 px-4">
+                          <span className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-white/80 uppercase">
+                            {member.plan_id}
+                          </span>
+                        </td>
+
+                        {/* Période */}
+                        <td className="py-3.5 px-4">
+                          <div className="font-mono font-bold text-white">
+                            {formatAdminDate(member.end_date)}
+                          </div>
+                          <div className="text-[10px] text-white/40">
+                            Début : {formatAdminDate(member.start_date)}
+                          </div>
+                        </td>
+
+                        {/* Statut */}
+                        <td className="py-3.5 px-4">
+                          <span
+                            className={`inline-flex rounded-md px-2 py-0.5 text-[11px] font-medium ${
+                              member.status === "actif"
+                                ? "bg-lime-400/10 text-lime-400 border border-lime-400/30"
+                                : member.status === "expire_bientot"
+                                ? "bg-amber-400/10 text-amber-300 border border-amber-400/30"
+                                : "bg-red-400/10 text-red-400 border border-red-400/30"
+                            }`}
+                          >
+                            {member.status === "actif"
+                              ? "Actif"
+                              : member.status === "expire_bientot"
+                              ? "Expire bientôt"
+                              : "Expiré"}
+                          </span>
+                        </td>
+
+                        {/* Actions épurées */}
+                        <td
+                          className="py-3.5 px-5 text-right"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="inline-flex items-center gap-1.5">
+                            {/* Pointer présence (si actif) ou Encaisser (si expiré) */}
+                            {!isExpired ? (
+                              <button
+                                type="button"
+                                onClick={() => void onQuickCheckIn(member.id)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-lime-400/30 bg-lime-400/10 px-2.5 py-1.5 text-xs font-semibold text-lime-400 hover:bg-lime-400 hover:text-black transition"
+                                title="Pointer sa présence"
+                              >
+                                <UserCheck size={13} />
+                                <span>Pointer</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => onOpenPaymentForMember(member)}
+                                className="inline-flex items-center gap-1 rounded-lg bg-emerald-500 px-2.5 py-1.5 text-xs font-bold text-black hover:bg-emerald-400 transition"
+                                title="Renouveler l'abonnement expiré"
+                              >
+                                <CreditCard size={13} />
+                                <span>Renouveler</span>
+                              </button>
+                            )}
+
+                            {/* Badge / QR Code */}
+                            <button
+                              type="button"
+                              onClick={() => setBadgeMember(member)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-medium text-white/90 hover:bg-white/10 transition"
+                              title="Carte membre & QR code"
+                            >
+                              <QrCode size={13} />
+                              <span className="hidden sm:inline">Carte QR</span>
                             </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    )}
+
+                            {/* Fiche 360° (Modifier, Paiements, Présences, Supprimer) */}
+                            <button
+                              type="button"
+                              onClick={() => setDrawerMember(member)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition"
+                              title="Ouvrir la fiche complète (Historique, Modification)"
+                            >
+                              <Eye size={13} />
+                              <span className="hidden md:inline">Fiche</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── TIROIR FICHE MEMBRE 360° ───────────────────────────────── */}
+      <MemberDetailsDrawer
+        member={activeDrawerMember}
+        payments={payments}
+        attendances={attendances}
+        isSuperAdmin={isSuperAdmin}
+        onClose={() => setDrawerMember(null)}
+        onQuickCheckIn={async (id) => {
+          await onQuickCheckIn(id);
+        }}
+        onOpenBadge={(m) => setBadgeMember(m)}
+        onOpenPayment={(m) => onOpenPaymentForMember(m)}
+        onEditMember={(m) => openEditModal(m)}
+        onDeleteMember={onDeleteMember}
+      />
 
       {/* ── MODAL NOUVEAU / MODIFIER MEMBRE ───────────────────────── */}
       {isModalOpen && (
@@ -450,7 +447,7 @@ export default function GymMembersTab({
                 type="button"
                 onClick={() => setIsModalOpen(false)}
                 aria-label="Fermer"
-                className="rounded-[6px] p-2 text-white/50 hover:bg-white/10 hover:text-white transition"
+                className="rounded-lg p-2 text-white/50 hover:bg-white/10 hover:text-white transition"
               >
                 <X size={16} strokeWidth={1.75} />
               </button>
@@ -494,12 +491,13 @@ export default function GymMembersTab({
                   onChange={(e) => setPlanId(e.target.value)}
                   className="mt-1.5 w-full rounded-xl border border-white/10 bg-black/60 px-4 py-2.5 text-xs text-white focus:border-lime-400 focus:outline-none"
                 >
+                  <option value="mensuel">Forfait Mensuel (15 000 FCFA)</option>
+                  <option value="trimestriel">Forfait Trimestriel 3 mois (40 000 FCFA)</option>
+                  <option value="semestriel">Forfait Semestriel 6 mois (75 000 FCFA)</option>
+                  <option value="annuel">Forfait Annuel 12 mois (140 000 FCFA)</option>
                   <option value="muscu-cardio">Muscu & Cardio (Essentiel)</option>
                   <option value="complete">Formule Complète (Tout inclus)</option>
                   <option value="coaching">Coaching personnalisé</option>
-                  <option value="mensuel">Forfait Mensuel simple</option>
-                  <option value="trimestriel">Forfait Trimestriel (3 mois)</option>
-                  <option value="annuel">Forfait Annuel (12 mois)</option>
                 </select>
               </div>
 
@@ -532,8 +530,8 @@ export default function GymMembersTab({
               </div>
 
               {/* Raccourcis de durée */}
-              <div className="flex items-center gap-2 pt-1">
-                <span className="text-[10px] uppercase font-bold text-white/40">Prolonger :</span>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="text-[10px] uppercase font-bold text-white/40">Durée :</span>
                 <button
                   type="button"
                   onClick={() => applyDuration(1)}
@@ -547,6 +545,13 @@ export default function GymMembersTab({
                   className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-white hover:border-lime-400 hover:text-lime-400"
                 >
                   +3 mois
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyDuration(6)}
+                  className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-white hover:border-lime-400 hover:text-lime-400"
+                >
+                  +6 mois
                 </button>
                 <button
                   type="button"

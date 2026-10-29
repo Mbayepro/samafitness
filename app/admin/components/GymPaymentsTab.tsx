@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { ArrowUpRight, ArrowDownRight, CreditCard, Receipt, X } from "lucide-react";
 import type { Payment, Member, PaymentMethod, Expense, ExpenseCategory } from "@/lib/gym-store";
-import { formatAdminFCFA, formatAdminDate } from "./ui/AdminFormatters";
+import { formatAdminDate } from "./ui/AdminFormatters";
 
 interface GymPaymentsTabProps {
   payments: Payment[];
@@ -18,6 +18,7 @@ interface GymPaymentsTabProps {
   }[];
   isSuperAdmin?: boolean;
   preSelectedMember?: Member | null;
+  defaultOpenPayment?: boolean;
   onRecordPayment: (data: {
     member_id: string;
     amount_fcfa: number;
@@ -63,6 +64,7 @@ export default function GymPaymentsTab({
   history6Months = [],
   isSuperAdmin = false,
   preSelectedMember,
+  defaultOpenPayment = false,
   onRecordPayment,
   onRecordExpense,
   onDeleteExpense,
@@ -95,14 +97,18 @@ export default function GymPaymentsTab({
   }, [history6Months]);
 
   // ── ÉTAT VUE ENTRÉES (PAIEMENTS) ───────────────────────────────────
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(Boolean(preSelectedMember));
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(
+    Boolean(preSelectedMember) || defaultOpenPayment
+  );
   const [selectedReceipt, setSelectedReceipt] = useState<Payment | null>(null);
   const [searchFilter, setSearchFilter] = useState("");
   const [methodFilter, setMethodFilter] = useState<string>("all");
   const [submittingPayment, setSubmittingPayment] = useState(false);
 
   // Formulaire Paiement
-  const [memberId, setMemberId] = useState(preSelectedMember?.id || "");
+  const [memberId, setMemberId] = useState(
+    preSelectedMember?.id || (members[0]?.id ?? "")
+  );
   const [amountFcfa, setAmountFcfa] = useState<number>(15000);
   const [method, setMethod] = useState<PaymentMethod>("Wave");
   const [periodStart, setPeriodStart] = useState(() => {
@@ -111,7 +117,12 @@ export default function GymPaymentsTab({
       : new Date().toISOString().split("T")[0];
   });
   const [periodEnd, setPeriodEnd] = useState(() => {
-    const d = new Date();
+    const todayStr = new Date().toISOString().split("T")[0];
+    const baseStart =
+      preSelectedMember?.end_date && preSelectedMember.end_date >= todayStr
+        ? preSelectedMember.end_date
+        : todayStr;
+    const d = new Date(baseStart);
     d.setMonth(d.getMonth() + 1);
     return d.toISOString().split("T")[0];
   });
@@ -144,6 +155,7 @@ export default function GymPaymentsTab({
     setPeriodEnd(end.toISOString().split("T")[0]);
 
     setNote("");
+    setSubView("incomes");
     setIsPaymentModalOpen(true);
   };
 
@@ -330,10 +342,15 @@ export default function GymPaymentsTab({
     0
   );
 
-  // Statistiques des dépenses du mois en cours
+  // Statistiques des dépenses du mois en cours (basées sur paid_at)
+  const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const startOfMonthMs = startOfMonth.getTime();
   const thisMonthExpenses = useMemo(() => {
-    return activeExpenses.filter((e) => new Date(e.created_at) >= startOfMonth);
-  }, [activeExpenses, startOfMonth]);
+    return activeExpenses.filter((e) => {
+      if (e.paid_at) return e.paid_at.startsWith(currentMonthPrefix);
+      return new Date(e.created_at).getTime() >= startOfMonthMs;
+    });
+  }, [activeExpenses, currentMonthPrefix, startOfMonthMs]);
 
   const monthExpensesTotal = thisMonthExpenses.reduce(
     (s, e) => s + (Number(e.amount_fcfa) || 0),
@@ -1178,6 +1195,34 @@ export default function GymPaymentsTab({
       {/* ── MODAL REÇU OFFICIEL (IMPRESSION & WHATSAPP) ─────────────── */}
       {selectedReceipt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm">
+          <style>{`
+            @media print {
+              body * {
+                visibility: hidden !important;
+              }
+              #receipt-printable,
+              #receipt-printable * {
+                visibility: visible !important;
+              }
+              #receipt-printable {
+                position: fixed !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                max-width: 148mm !important;
+                margin: 0 !important;
+                padding: 8mm !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                border: 1px solid #000000 !important;
+                box-shadow: none !important;
+              }
+              #receipt-printable * {
+                color: #000000 !important;
+                border-color: #cccccc !important;
+              }
+            }
+          `}</style>
           <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl border border-white/15 bg-[#121212] p-6 sm:p-8 shadow-2xl text-white">
             {/* Zone de reçu imprimable */}
             <div id="receipt-printable" className="rounded-2xl border border-white/10 bg-black/80 p-6">

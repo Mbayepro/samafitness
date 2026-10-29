@@ -38,7 +38,8 @@ export default function ConvertLeadModal({
     setDurationMonths(months);
     if (months === 1) setAmountFcfa(15000);
     else if (months === 3) setAmountFcfa(40000);
-    else if (months === 12) setAmountFcfa(150000);
+    else if (months === 6) setAmountFcfa(75000);
+    else if (months === 12) setAmountFcfa(140000);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

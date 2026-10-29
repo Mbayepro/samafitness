@@ -467,14 +467,17 @@ export async function getMemberByQrToken(qrToken: string): Promise<Member | null
   const clean = qrToken.trim();
   if (!clean) return null;
 
+  // Support optionnel de recherche par code court SF-0001 ou numéro
+  const sfMatch = clean.match(/^SF-(\d+)$/i);
+  const memberNumLookup = sfMatch ? parseInt(sfMatch[1], 10) : null;
+
   if (isSupabaseConfigured()) {
     try {
       const supabase = await createClient();
-      const { data, error } = await supabase
-        .from("members")
-        .select("*")
-        .eq("qr_token", clean)
-        .maybeSingle();
+      const query = supabase.from("members").select("*");
+      const { data, error } = memberNumLookup
+        ? await query.eq("member_number", memberNumLookup).maybeSingle()
+        : await query.eq("qr_token", clean).maybeSingle();
 
       if (!error && data) {
         const m = data as Member;
@@ -489,7 +492,13 @@ export async function getMemberByQrToken(qrToken: string): Promise<Member | null
   }
 
   const local = readLocalGymData();
-  const found = local.members.find((m) => m.qr_token === clean);
+  const found = local.members.find((m) => {
+    if (m.qr_token === clean || m.id === clean) return true;
+    if (memberNumLookup && formatMemberNumber(m.member_number, m.id).toUpperCase() === clean.toUpperCase()) {
+      return true;
+    }
+    return false;
+  });
   if (found) {
     return {
       ...found,
@@ -875,32 +884,25 @@ export async function softDeleteExpense(id: string, deletedBy: string): Promise<
 // STATISTIQUES GYM (TABLEAU DE BORD)
 // ─────────────────────────────────────────────────────────────
 
-export async function getGymStats(): Promise<GymStats> {
-  let expenses: Expense[] = [];
-  try {
-    expenses = await getExpenses();
-  } catch (err) {
-    logger.warn({ err }, "Impossible de récupérer les dépenses pour les statistiques");
-  }
-
-  const [members, payments, attendances] = await Promise.all([
-    getMembers(),
-    getPayments(),
-    getAttendances(),
-  ]);
-
+export function computeGymStatsFromData(
+  members: Member[],
+  payments: Payment[],
+  attendances: Attendance[],
+  expenses: Expense[] = []
+): GymStats {
   const activeMembers = members.filter((m) => m.status === "actif").length;
   const expiringSoonMembers = members.filter((m) => m.status === "expire_bientot").length;
   const expiredMembers = members.filter((m) => m.status === "expire").length;
 
   const now = new Date();
-  const todayStr = now.toISOString().split("T")[0];
+  const todayDakar = getDakarDate(now);
 
   const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-  const todayAttendances = attendances.filter((a) =>
-    a.checked_in_at.startsWith(todayStr)
+  const todayAttendances = attendances.filter(
+    (a) => getDakarDate(a.checked_in_at) === todayDakar
   ).length;
 
   const weekAttendances = attendances.filter(
@@ -912,8 +914,13 @@ export async function getGymStats(): Promise<GymStats> {
     .filter((p) => new Date(p.created_at) >= startOfMonth)
     .reduce((sum, p) => sum + (Number(p.amount_fcfa) || 0), 0);
 
+  // Calcul des dépenses sur paid_at (date de paiement réelle) ou repli sur created_at
   const monthExpensesFcfa = expenses
-    .filter((e) => new Date(e.created_at) >= startOfMonth)
+    .filter((e) => {
+      if (e.deleted_at) return false;
+      if (e.paid_at && e.paid_at.startsWith(currentMonthPrefix)) return true;
+      return !e.paid_at && new Date(e.created_at) >= startOfMonth;
+    })
     .reduce((sum, e) => sum + (Number(e.amount_fcfa) || 0), 0);
 
   const monthNetFcfa = monthRevenueFcfa - monthExpensesFcfa;
@@ -950,6 +957,8 @@ export async function getGymStats(): Promise<GymStats> {
 
     const exp = expenses
       .filter((e) => {
+        if (e.deleted_at) return false;
+        if (e.paid_at) return e.paid_at.startsWith(monthKey);
         const eDate = new Date(e.created_at);
         return eDate >= d && eDate < nextM;
       })
@@ -976,5 +985,22 @@ export async function getGymStats(): Promise<GymStats> {
     monthNetFcfa,
     history6Months,
   };
+}
+
+export async function getGymStats(): Promise<GymStats> {
+  let expenses: Expense[] = [];
+  try {
+    expenses = await getExpenses();
+  } catch (err) {
+    logger.warn({ err }, "Impossible de récupérer les dépenses pour les statistiques");
+  }
+
+  const [members, payments, attendances] = await Promise.all([
+    getMembers(),
+    getPayments(),
+    getAttendances(),
+  ]);
+
+  return computeGymStatsFromData(members, payments, attendances, expenses);
 }
 
