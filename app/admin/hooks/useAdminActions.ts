@@ -293,6 +293,17 @@ export function useAdminActions({
     });
   };
 
+  const handleSaveShop = (e: FormEvent) => {
+    e.preventDefault();
+    if (!content) return;
+    startTransition(async () => {
+      const res = await saveSiteContentAction({ shop: content.shop });
+      if (!res.success) return showFeedback("error", res.error);
+      setContent(res.content);
+      showFeedback("success", "Configuration de la Boutique enregistrée avec succès !");
+    });
+  };
+
   const handleResetDefaults = () => {
     if (
       !confirm(
@@ -360,6 +371,7 @@ export function useAdminActions({
     handleSavePlans,
     handleSaveCoach,
     handleSaveFAQ,
+    handleSaveShop,
     handleResetDefaults,
     handleRecordExpense,
     handleSoftDeleteExpense,

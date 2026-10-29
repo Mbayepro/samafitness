@@ -94,6 +94,27 @@ export interface FAQItem {
   answer: string;
 }
 
+export interface ShopProductItem {
+  id: string;
+  name: string;
+  category: "Protéines & Nutrition" | "Serviettes & Accessoires" | "Boissons & Énergie";
+  statusBadge: string; // ex: "Bientôt au club", "Sur demande", "Disponible à l'accueil"
+  priceNote: string; // ex: "Tarif sur demande" ou "3 000 FCFA" quand connu
+  goalTag: string; // ex: "Prise de masse", "Hygiène & Confort", "Récupération"
+  description: string;
+  highlights: string[];
+  imageUrl: string;
+  featured?: boolean;
+}
+
+export interface ShopConfig {
+  enabled: boolean;
+  badgeText: string;
+  title: string;
+  subtitle: string;
+  items: ShopProductItem[];
+}
+
 export interface SocialLink {
   name: string;
   url: string;
@@ -115,7 +136,7 @@ export const SITE_DATA = {
     accentName: "FITNESS",
     slogan: "Dépassez vos limites.",
     subSlogan:
-      "Ta salle de sport à Ndioum, sur la route nationale en face de la mairie.",
+      "Salle de sport à Ndioum, sur la route nationale en face de la mairie.",
     description:
       "Musculation, cardio, cross-training, boxe et cours collectifs à Ndioum. Une salle pour se remettre en forme, perdre du poids ou prendre du muscle, dans une bonne ambiance.",
   },
@@ -356,4 +377,70 @@ export const SITE_DATA = {
         "Une tenue de sport confortable, des baskets propres, une serviette et une bouteille d'eau.",
     },
   ] as FAQItem[],
+
+  // ── 12. BOUTIQUE & NUTRITION (SAMBA SHOP) ──────────────────
+  // Section masquée par défaut (enabled: false). Activable à tout moment depuis l'Admin.
+  shop: {
+    enabled: false,
+    badgeText: "Bientôt disponible au club • Samba Shop",
+    title: "NUTRITION & ÉQUIPEMENTS",
+    subtitle:
+      "Serviettes de sport, protéines, shakers et boissons de récupération directement à l'accueil de votre salle à Ndioum. Pré-réservez ou demandez la disponibilité sur WhatsApp.",
+    items: [
+      {
+        id: "whey-proteine",
+        name: "Protéines (Whey & Mass Gainer)",
+        category: "Protéines & Nutrition",
+        statusBadge: "Bientôt au club",
+        priceNote: "Tarif & formats sur demande",
+        goalTag: "Prise de masse & Récupération",
+        description:
+          "Compléments protéinés sélectionnés pour accélérer la récupération musculaire et accompagner votre prise de masse après l'entraînement.",
+        highlights: [
+          "En pot ou en dose à la séance",
+          "Conseils d'utilisation par le coach",
+          "Idéal post-entraînement",
+        ],
+        imageUrl:
+          "https://images.unsplash.com/photo-1593095948071-474c5cc2989d?auto=format&fit=crop&w=900&q=80",
+        featured: true,
+      },
+      {
+        id: "serviette-sport",
+        name: "Serviette Sport & Accessoires",
+        category: "Serviettes & Accessoires",
+        statusBadge: "Bientôt au club",
+        priceNote: "Tarif sur demande",
+        goalTag: "Hygiène & Confort",
+        description:
+          "Serviettes absorbantes pour vos séances sur les bancs et machines, gants de musculation et shakers pratiques à emporter partout.",
+        highlights: [
+          "Format adapté aux bancs & machines",
+          "Séchage rapide & doux",
+          "Gants & shakers d'entraînement",
+        ],
+        imageUrl:
+          "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=900&q=80",
+        featured: false,
+      },
+      {
+        id: "creatine-energie",
+        name: "Créatine, BCAA & Boissons Fraîches",
+        category: "Boissons & Énergie",
+        statusBadge: "Bientôt au club",
+        priceNote: "Tarif sur demande",
+        goalTag: "Force & Hydratation",
+        description:
+          "Hydratation, acides aminés et boosters d'énergie pour maintenir une intensité maximale pendant vos séances de musculation, boxe ou cross-training.",
+        highlights: [
+          "Endurance & explosivité",
+          "Hydratation pendant la séance",
+          "Disponibilité directe à l'accueil",
+        ],
+        imageUrl:
+          "https://images.unsplash.com/photo-1546483875-ad9014c88eba?auto=format&fit=crop&w=900&q=80",
+        featured: false,
+      },
+    ],
+  } as ShopConfig,
 };

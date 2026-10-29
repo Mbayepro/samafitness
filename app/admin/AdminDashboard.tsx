@@ -251,6 +251,7 @@ export default function AdminDashboard({ admin }: { admin: AdminContext }) {
                 onSaveClubInfo={actions.handleSaveClubInfo}
                 onResetDefaults={actions.handleResetDefaults}
                 onSavePlans={actions.handleSavePlans}
+                onSaveShop={actions.handleSaveShop}
                 onSaveCoach={actions.handleSaveCoach}
                 onSaveFAQ={actions.handleSaveFAQ}
               />

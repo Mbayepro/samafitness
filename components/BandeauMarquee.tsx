@@ -1,7 +1,10 @@
 "use client";
 
+import { useSiteData } from "@/lib/site-context";
+
 export default function BandeauMarquee() {
-  const items = [
+  const SITE_DATA = useSiteData();
+  const baseItems = [
     "MUSCULATION",
     "CARDIO",
     "BOXE & COMBAT",
@@ -11,6 +14,9 @@ export default function BandeauMarquee() {
     "ROUTE NATIONALE",
     "SAMBA DIOP COACH",
   ];
+  const items = SITE_DATA.shop?.enabled
+    ? [...baseItems, "NUTRITION & PROTÉINES", "SERVIETTES & ACCESSOIRES"]
+    : baseItems;
 
   return (
     <div

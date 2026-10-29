@@ -5,11 +5,12 @@ import type { SiteContentType } from "@/lib/content-store";
 import type { FeedbackKind } from "@/app/admin/admin-types";
 import ClubInfoTab from "./ClubInfoTab";
 import PlansEditorTab from "./PlansEditorTab";
+import ShopEditorTab from "./ShopEditorTab";
 import CoachEditorTab from "./CoachEditorTab";
 import FaqEditorTab from "./FaqEditorTab";
 import SupabaseTab from "./SupabaseTab";
 
-type SiteSubTab = "club" | "plans" | "coach" | "faq" | "supabase";
+type SiteSubTab = "club" | "plans" | "shop" | "coach" | "faq" | "supabase";
 
 interface SiteSettingsTabProps {
   content: SiteContentType | null;
@@ -20,6 +21,7 @@ interface SiteSettingsTabProps {
   onSaveClubInfo: (e: FormEvent<HTMLFormElement>) => void;
   onResetDefaults: () => void;
   onSavePlans: (e: FormEvent) => void;
+  onSaveShop?: (e: FormEvent) => void;
   onSaveCoach: (e: FormEvent<HTMLFormElement>) => void;
   onSaveFAQ: (e: FormEvent) => void;
 }
@@ -33,6 +35,7 @@ export default function SiteSettingsTab({
   onSaveClubInfo,
   onResetDefaults,
   onSavePlans,
+  onSaveShop,
   onSaveCoach,
   onSaveFAQ,
 }: SiteSettingsTabProps) {
@@ -41,6 +44,7 @@ export default function SiteSettingsTab({
   const subTabs: { key: SiteSubTab; label: string }[] = [
     { key: "club", label: "Infos Salle" },
     { key: "plans", label: "Tarifs & Formules" },
+    { key: "shop", label: "Boutique & Nutrition" },
     { key: "coach", label: "Coach" },
     { key: "faq", label: "Questions Fréquentes (FAQ)" },
     { key: "supabase", label: "Base de Données Supabase" },
@@ -104,6 +108,15 @@ export default function SiteSettingsTab({
           setContent={setContent}
           isPending={isPending}
           onSubmit={onSavePlans}
+        />
+      )}
+
+      {subTab === "shop" && content && onSaveShop && (
+        <ShopEditorTab
+          content={content}
+          setContent={setContent}
+          isPending={isPending}
+          onSubmit={onSaveShop}
         />
       )}
 

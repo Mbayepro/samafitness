@@ -9,7 +9,7 @@ export default function Hero() {
   const salle = SITE_DATA.salles[0];
 
   // Motion variants for word-by-word title stagger
-  const titleWords = ["TA", "SALLE", "DE", "SPORT"];
+  const titleWords = ["SALLE", "DE", "SPORT"];
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -176,6 +176,17 @@ export default function Hero() {
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-lime-400" />
                   <span>{SITE_DATA.contact.phone}</span>
+                </a>
+                <a
+                  id="hero-whatsapp-btn"
+                  href={`https://wa.me/${SITE_DATA.contact.whatsapp.number}?text=${encodeURIComponent(
+                    SITE_DATA.contact.whatsapp.defaultMessage
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full border border-emerald-500/35 bg-emerald-500/15 px-4 py-2 text-xs font-black uppercase text-emerald-300 hover:bg-emerald-400 hover:text-black transition"
+                >
+                  WhatsApp ↗
                 </a>
                 <a
                   id="hero-maps-btn"

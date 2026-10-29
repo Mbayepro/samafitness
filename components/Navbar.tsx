@@ -54,7 +54,7 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <nav
-            className="hidden items-center gap-8 lg:flex"
+            className="hidden items-center gap-7 lg:flex"
             aria-label="Navigation principale"
           >
             {SITE_DATA.navLinks.map(({ href, label }) => (
@@ -67,6 +67,18 @@ export default function Navbar() {
                 <span className="absolute -bottom-1 left-0 h-0.5 w-0 bg-lime-400 transition-all duration-300 group-hover:w-full" />
               </a>
             ))}
+            {SITE_DATA.shop?.enabled && (
+              <a
+                href="#boutique"
+                className="group relative inline-flex items-center gap-1.5 text-sm font-semibold tracking-wide text-amber-300/90 transition-colors duration-200 hover:text-amber-300"
+              >
+                <span>Boutique</span>
+                <span className="rounded-full border border-amber-400/40 bg-amber-400/15 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-amber-300">
+                  Shop
+                </span>
+                <span className="absolute -bottom-1 left-0 h-0.5 w-0 bg-amber-400 transition-all duration-300 group-hover:w-full" />
+              </a>
+            )}
           </nav>
 
           {/* Action Button & Mobile Burger */}
@@ -140,6 +152,20 @@ export default function Navbar() {
                     {label}
                   </motion.a>
                 ))}
+                {SITE_DATA.shop?.enabled && (
+                  <motion.a
+                    href="#boutique"
+                    onClick={closeMenu}
+                    initial={{ x: -16, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    className="flex items-center justify-between rounded-xl px-4 py-2.5 text-base font-bold text-amber-300 transition-colors hover:bg-white/5"
+                  >
+                    <span>Boutique & Nutrition</span>
+                    <span className="rounded-full border border-amber-400/40 bg-amber-400/15 px-2 py-0.5 text-[10px] font-black uppercase text-amber-300">
+                      Samba Shop
+                    </span>
+                  </motion.a>
+                )}
 
                 <div className="my-2 border-t border-white/10 pt-2">
                   <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-widest text-white/40">

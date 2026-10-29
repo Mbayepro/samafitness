@@ -5,6 +5,7 @@ import BandeauMarquee from "@/components/BandeauMarquee";
 import Services from "@/components/Services";
 import Salles from "@/components/Salles";
 import Tarifs from "@/components/Tarifs";
+import Boutique from "@/components/Boutique";
 import Coachs from "@/components/Coachs";
 import FAQ from "@/components/FAQ";
 import Contact from "@/components/Contact";
@@ -38,6 +39,9 @@ export default async function Home() {
 
         {/* Nos Formules (tarifs sur demande) */}
         <Tarifs />
+
+        {/* Boutique & Nutrition (activable/désactivable depuis l'Admin) */}
+        <Boutique />
 
         {/* Coach fondateur */}
         <Coachs />

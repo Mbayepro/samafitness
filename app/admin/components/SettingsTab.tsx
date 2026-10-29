@@ -17,6 +17,7 @@ interface SettingsTabProps {
   onSaveClubInfo: (e: FormEvent<HTMLFormElement>) => void;
   onResetDefaults: () => void;
   onSavePlans: (e: FormEvent) => void;
+  onSaveShop?: (e: FormEvent) => void;
   onSaveCoach: (e: FormEvent<HTMLFormElement>) => void;
   onSaveFAQ: (e: FormEvent) => void;
 }
@@ -31,6 +32,7 @@ export default function SettingsTab({
   onSaveClubInfo,
   onResetDefaults,
   onSavePlans,
+  onSaveShop,
   onSaveCoach,
   onSaveFAQ,
 }: SettingsTabProps) {
@@ -86,6 +88,7 @@ export default function SettingsTab({
           onSaveClubInfo={onSaveClubInfo}
           onResetDefaults={onResetDefaults}
           onSavePlans={onSavePlans}
+          onSaveShop={onSaveShop}
           onSaveCoach={onSaveCoach}
           onSaveFAQ={onSaveFAQ}
         />

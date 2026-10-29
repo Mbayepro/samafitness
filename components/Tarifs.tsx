@@ -105,7 +105,7 @@ export default function Tarifs() {
               </div>
 
               {/* Action Button */}
-              <div className="mt-8 pt-6 border-t border-white/10">
+              <div className="mt-8 pt-6 border-t border-white/10 space-y-2.5">
                 <a
                   href="#rejoindre"
                   className={`block w-full rounded-2xl py-4 text-center text-xs font-black uppercase tracking-wider transition ${
@@ -117,7 +117,19 @@ export default function Tarifs() {
                   {plan.ctaText}
                 </a>
 
-                <p className="mt-3 text-center text-[11px] text-white/50">
+                <a
+                  href={`https://wa.me/${SITE_DATA.contact.whatsapp.number}?text=${encodeURIComponent(
+                    `Bonjour ${SITE_DATA.brand.name}, je souhaite connaître le tarif de la formule « ${plan.name} » à la salle de Ndioum.`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 py-3 text-center text-xs font-bold text-emerald-300 transition hover:border-emerald-400 hover:bg-emerald-500/20"
+                >
+                  <span>Tarif direct sur WhatsApp</span>
+                  <span>↗</span>
+                </a>
+
+                <p className="mt-2 text-center text-[11px] text-white/50">
                   Tarif par téléphone ou WhatsApp : {SITE_DATA.contact.phone}
                 </p>
               </div>

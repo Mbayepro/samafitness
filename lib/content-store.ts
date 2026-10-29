@@ -33,6 +33,15 @@ export async function getSiteContent(): Promise<SiteContentType> {
       ...SITE_DATA,
       ...localOverrides,
       ...remoteSettings,
+      shop: {
+        ...SITE_DATA.shop,
+        ...(localOverrides?.shop || {}),
+        ...(remoteSettings.shop || {}),
+        items:
+          remoteSettings.shop?.items ||
+          localOverrides?.shop?.items ||
+          SITE_DATA.shop.items,
+      },
     };
   }
 
@@ -47,6 +56,11 @@ export async function getSiteContent(): Promise<SiteContentType> {
       coaches: localOverrides.coaches || SITE_DATA.coaches,
       faq: localOverrides.faq || SITE_DATA.faq,
       services: localOverrides.services || SITE_DATA.services,
+      shop: {
+        ...SITE_DATA.shop,
+        ...(localOverrides.shop || {}),
+        items: localOverrides.shop?.items || SITE_DATA.shop.items,
+      },
     };
   }
 
@@ -67,6 +81,13 @@ export async function updateSiteContent(
     coaches: updates.coaches || current.coaches,
     faq: updates.faq || current.faq,
     services: updates.services || current.services,
+    shop: updates.shop
+      ? {
+          ...current.shop,
+          ...updates.shop,
+          items: updates.shop.items || current.shop.items,
+        }
+      : current.shop,
   };
 
   // Mettre à jour l'adresse et le téléphone dans contact & salles

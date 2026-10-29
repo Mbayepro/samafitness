@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import QRCode from "qrcode";
-import { X, RefreshCw, Printer, Share2, MessageSquare, Download, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { X, RefreshCw, Printer, Share2, MessageSquare, Download, AlertTriangle, CheckCircle2, Copy } from "lucide-react";
 import type { Member } from "@/lib/gym-store";
 import { formatSenegalPhoneForWhatsApp } from "@/lib/whatsapp";
 import { logger } from "@/lib/logger";
@@ -126,21 +126,38 @@ export default function MemberBadgeCardModal({
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
 
-    // Fond sombre épuré
+    // Fond sombre épuré avec halo athlétique
     const bgGrad = ctx.createLinearGradient(0, 0, CARD_WIDTH, CARD_HEIGHT);
-    bgGrad.addColorStop(0, "#131316");
-    bgGrad.addColorStop(1, "#09090b");
+    bgGrad.addColorStop(0, "#141619");
+    bgGrad.addColorStop(0.55, "#0d0e11");
+    bgGrad.addColorStop(1, "#070809");
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
 
+    // Motif géométrique athlétique subtil en filigrane (bandes obliques)
+    ctx.save();
+    ctx.strokeStyle = "rgba(163, 230, 53, 0.035)";
+    ctx.lineWidth = 28;
+    for (let x = -400; x < CARD_WIDTH + 600; x += 110) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x - 450, CARD_HEIGHT);
+      ctx.stroke();
+    }
+    ctx.restore();
+
     // Bordure extérieure sobre
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.14)";
     ctx.lineWidth = 6;
     ctx.strokeRect(3, 3, CARD_WIDTH - 6, CARD_HEIGHT - 6);
 
-    // Liseré supérieur sport lime
-    ctx.fillStyle = "#a3e635";
-    ctx.fillRect(0, 0, CARD_WIDTH, 14);
+    // Liseré supérieur sport lime + ambre
+    const topBarGrad = ctx.createLinearGradient(0, 0, CARD_WIDTH, 0);
+    topBarGrad.addColorStop(0, "#a3e635");
+    topBarGrad.addColorStop(0.7, "#84cc16");
+    topBarGrad.addColorStop(1, "#f59e0b");
+    ctx.fillStyle = topBarGrad;
+    ctx.fillRect(0, 0, CARD_WIDTH, 16);
 
     // ── EN-TÊTE : MARQUE SAMBA FITNESS & NUMÉRO ───────────────────────
     ctx.fillStyle = "#ffffff";
@@ -255,7 +272,7 @@ export default function MemberBadgeCardModal({
     ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
     ctx.font = "26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    const addressText = "Samba Fitness • Face Station Shell, Ndioum";
+    const addressText = "Samba Fitness • En face de la Mairie, Ndioum";
     ctx.fillText(addressText, 100, 1205);
 
     // Zone droite : Téléphone officiel
@@ -490,7 +507,7 @@ export default function MemberBadgeCardModal({
           style={{ aspectRatio: "85.6 / 54" }}
         >
           {/* Liseré supérieur sport */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-lime-400" />
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-lime-400 via-lime-500 to-amber-400" />
 
           {/* En-tête */}
           <div className="flex items-start justify-between border-b border-white/10 pb-2">
@@ -502,9 +519,24 @@ export default function MemberBadgeCardModal({
                 NDIOUM • SÉNÉGAL
               </p>
             </div>
-            <span className="font-mono text-xs font-bold text-lime-400 rounded border border-lime-400/30 bg-lime-400/10 px-2 py-0.5">
-              {memberNumFormatted}
-            </span>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof navigator !== "undefined" && navigator.clipboard) {
+                  navigator.clipboard.writeText(memberNumFormatted);
+                  setFeedback({
+                    type: "success",
+                    text: `Numéro ${memberNumFormatted} copié dans le presse-papiers !`,
+                  });
+                  setTimeout(() => setFeedback(null), 3000);
+                }
+              }}
+              title="Cliquer pour copier le numéro de membre"
+              className="inline-flex items-center gap-1 font-mono text-xs font-bold text-lime-400 rounded border border-lime-400/30 bg-lime-400/10 px-2 py-0.5 hover:bg-lime-400/20 transition"
+            >
+              <span>{memberNumFormatted}</span>
+              <Copy size={10} />
+            </button>
           </div>
 
           {/* Corps de carte : Nom et QR (pas de statut, pas de tél, pas de formule) */}
@@ -547,7 +579,7 @@ export default function MemberBadgeCardModal({
 
           {/* Pied de carte : Deux zones distinctes sans aucun chevauchement */}
           <div className="border-t border-white/10 pt-1.5 flex items-center justify-between text-[8px] text-white/40">
-            <span className="truncate max-w-[60%]">Samba Fitness • Face Station Shell, Ndioum</span>
+            <span className="truncate max-w-[60%]">Samba Fitness • En face de la Mairie, Ndioum</span>
             <span className="font-medium text-white/60 flex-shrink-0">Tél: +221 78 957 35 53</span>
           </div>
         </div>
