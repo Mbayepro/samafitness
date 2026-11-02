@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import BandeauMarquee from "@/components/BandeauMarquee";
+import RecruitmentBanner from "@/components/RecruitmentBanner";
 import Services from "@/components/Services";
 import Salles from "@/components/Salles";
 import Tarifs from "@/components/Tarifs";
@@ -30,6 +31,9 @@ export default async function Home() {
 
         {/* Continuous athletic ticker band */}
         <BandeauMarquee />
+
+        {/* Campagne officielle de Recrutement (1-20 Nov 2026) */}
+        <RecruitmentBanner />
 
         {/* Nos Services (Musculation, Cardio, Cross, Combat, Cours collectifs) */}
         <Services />

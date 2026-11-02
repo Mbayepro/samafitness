@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, Users, BellRing, Inbox, CalendarCheck, Wallet, Settings } from "lucide-react";
+import { LayoutDashboard, Users, BellRing, Inbox, CalendarCheck, Wallet, Settings, Briefcase } from "lucide-react";
 import type { TabKey } from "@/app/admin/admin-types";
 
 interface AdminTabsProps {
@@ -9,6 +9,7 @@ interface AdminTabsProps {
   isSuperAdmin: boolean;
   membersCount: number;
   leadsCount: number;
+  candidatesCount?: number;
   todayAttendances: number;
   relancesCount: number;
   supabaseConfigured: boolean;
@@ -31,6 +32,7 @@ export default function AdminTabs({
   isSuperAdmin,
   membersCount,
   leadsCount,
+  candidatesCount = 0,
   todayAttendances,
   relancesCount,
 }: AdminTabsProps) {
@@ -38,6 +40,7 @@ export default function AdminTabs({
   const isMembers = activeTab === "members";
   const isRelances = activeTab === "relances";
   const isLeads = activeTab === "leads";
+  const isCandidates = activeTab === "candidates";
   const isAttendances = activeTab === "attendances";
   const isFinances = activeTab === "finances" || activeTab === "payments";
   const isSettings =
@@ -125,6 +128,28 @@ export default function AdminTabs({
               }`}
             >
               {leadsCount}
+            </span>
+          )}
+        </button>
+
+        {/* 4b. Candidatures / Recrutement (Novembre 2026) */}
+        <button
+          type="button"
+          onClick={() => onSelectTab("candidates")}
+          aria-current={isCandidates ? "page" : undefined}
+          className={`flex items-center gap-2 ${tabClass(isCandidates)}`}
+        >
+          <Briefcase size={14} strokeWidth={2} className={isCandidates ? "text-black" : candidatesCount > 0 ? "text-amber-300" : ""} />
+          <span>Candidatures</span>
+          {candidatesCount > 0 && (
+            <span
+              className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${
+                isCandidates
+                  ? "bg-black/20 text-black"
+                  : "bg-amber-400/20 text-amber-300 border border-amber-400/30"
+              }`}
+            >
+              {candidatesCount}
             </span>
           )}
         </button>

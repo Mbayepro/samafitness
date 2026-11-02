@@ -4,6 +4,7 @@ export type TabKey =
   | "attendances"
   | "finances"
   | "settings"
+  | "candidates"
   // Clés conservées pour compatibilité / sous-onglets
   | "payments"
   | "relances"

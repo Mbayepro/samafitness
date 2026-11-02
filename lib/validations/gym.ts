@@ -139,3 +139,70 @@ export const expenseSchema = z.object({
 });
 
 export type ExpenseInput = z.infer<typeof expenseSchema>;
+
+/**
+ * Job Application / Candidate Schema
+ */
+export const JOB_POSITIONS = ["coach", "gestionnaire", "secretaire", "menage"] as const;
+export type JobPosition = (typeof JOB_POSITIONS)[number];
+
+export const JOB_POSITION_LABELS: Record<JobPosition, string> = {
+  coach: "Coach sportif",
+  gestionnaire: "Gestionnaire de salle",
+  secretaire: "Secrétaire / Accueil",
+  menage: "Femme de ménage / Entretien",
+};
+
+export const candidateSchema = z.object({
+  full_name: z
+    .string()
+    .trim()
+    .min(2, "Le nom complet doit comporter au moins 2 caractères.")
+    .max(100, "Le nom complet ne peut pas dépasser 100 caractères."),
+  phone: z
+    .string()
+    .trim()
+    .refine(
+      (val) => phoneRegex.test(val.replace(/[\s.-]+/g, "")),
+      "Veuillez renseigner un numéro de téléphone valide (ex: 77 123 45 67 ou +221 78 957 35 53)."
+    ),
+  whatsapp: z
+    .string()
+    .trim()
+    .refine(
+      (val) => !val || phoneRegex.test(val.replace(/[\s.-]+/g, "")),
+      "Numéro WhatsApp invalide."
+    )
+    .optional()
+    .or(z.literal("")),
+  email: z
+    .string()
+    .trim()
+    .email("Adresse email invalide.")
+    .optional()
+    .or(z.literal("")),
+  position: z.enum(JOB_POSITIONS, {
+    message: "Veuillez sélectionner un poste valide.",
+  }),
+  city: z
+    .string()
+    .trim()
+    .min(2, "Veuillez indiquer votre ville ou quartier de résidence.")
+    .max(80, "Nom de ville trop long."),
+  experience: z
+    .string()
+    .trim()
+    .min(1, "Veuillez préciser votre niveau d'expérience."),
+  availability: z
+    .string()
+    .trim()
+    .min(1, "Veuillez indiquer votre disponibilité."),
+  message: z
+    .string()
+    .trim()
+    .max(2000, "Le message ne peut pas dépasser 2000 caractères.")
+    .optional()
+    .or(z.literal("")),
+});
+
+export type CandidateInput = z.infer<typeof candidateSchema>;

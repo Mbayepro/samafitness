@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchAdminData } from "@/app/actions/admin-actions";
 import { fetchGymDataAction } from "@/app/actions/gym-actions";
+import { fetchCandidatesAction } from "@/app/actions/recruitment-actions";
 import type { Lead } from "@/lib/leads-store";
+import type { Candidate } from "@/lib/candidates-store";
 import type { SiteContentType } from "@/lib/content-store";
 import type { Member, Payment, Attendance, GymStats, Expense } from "@/lib/gym-store";
 import { logger } from "@/lib/logger";
@@ -17,12 +19,17 @@ export function useAdminData(showFeedback: (type: FeedbackKind, text: string) =>
   const [payments, setPayments] = useState<Payment[]>([]);
   const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [stats, setStats] = useState<GymStats | null>(null);
   const [loadingData, setLoadingData] = useState(true);
 
   const loadData = useCallback(async () => {
     try {
-      const [adminRes, gymRes] = await Promise.all([fetchAdminData(), fetchGymDataAction()]);
+      const [adminRes, gymRes, candRes] = await Promise.all([
+        fetchAdminData(),
+        fetchGymDataAction(),
+        fetchCandidatesAction(),
+      ]);
 
       if (adminRes.success) {
         setLeads(adminRes.leads);
@@ -41,6 +48,10 @@ export function useAdminData(showFeedback: (type: FeedbackKind, text: string) =>
       } else {
         showFeedback("error", gymRes.error);
       }
+
+      if (candRes.success) {
+        setCandidates(candRes.candidates);
+      }
     } catch (err) {
       logger.error({ err }, "Erreur chargement données admin");
       showFeedback("error", "Impossible de charger les données du panneau.");
@@ -53,7 +64,11 @@ export function useAdminData(showFeedback: (type: FeedbackKind, text: string) =>
     let active = true;
     void (async () => {
       try {
-        const [adminRes, gymRes] = await Promise.all([fetchAdminData(), fetchGymDataAction()]);
+        const [adminRes, gymRes, candRes] = await Promise.all([
+          fetchAdminData(),
+          fetchGymDataAction(),
+          fetchCandidatesAction(),
+        ]);
         if (!active) return;
         if (adminRes.success) {
           setLeads(adminRes.leads);
@@ -70,6 +85,9 @@ export function useAdminData(showFeedback: (type: FeedbackKind, text: string) =>
           setStats(gymRes.stats);
         } else {
           showFeedback("error", gymRes.error);
+        }
+        if (candRes.success) {
+          setCandidates(candRes.candidates);
         }
       } catch (err) {
         if (!active) return;
@@ -96,6 +114,8 @@ export function useAdminData(showFeedback: (type: FeedbackKind, text: string) =>
     expenses,
     setExpenses,
     stats,
+    candidates,
+    setCandidates,
     loadingData,
     loadData,
   };

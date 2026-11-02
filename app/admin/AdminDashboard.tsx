@@ -23,6 +23,7 @@ import ChangePasswordModal from "./components/ChangePasswordModal";
 import QRScannerModal from "./components/QRScannerModal";
 import MemberDetailsDrawer from "./components/MemberDetailsDrawer";
 import MemberBadgeCardModal from "./components/MemberBadgeCardModal";
+import GymCandidatesTab from "./components/GymCandidatesTab";
 import SettingsTab from "./components/SettingsTab";
 import { SkeletonTable } from "@/components/ui/skeleton/SkeletonTable";
 
@@ -142,6 +143,7 @@ export default function AdminDashboard({ admin }: { admin: AdminContext }) {
           isSuperAdmin={isSuperAdmin}
           membersCount={data.members.length}
           leadsCount={pendingLeadsCount}
+          candidatesCount={data.candidates.length}
           todayAttendances={activeStats.todayAttendances}
           relancesCount={activeStats.expiringSoonMembers + activeStats.expiredMembers}
           supabaseConfigured={data.supabaseConfigured}
@@ -207,6 +209,17 @@ export default function AdminDashboard({ admin }: { admin: AdminContext }) {
               onOpenPaymentForMember={(member) => handleTriggerPayment(member)}
               onOpenScannerModal={() => setIsGlobalScannerOpen(true)}
               showFeedback={showFeedback}
+            />
+          </div>
+        )}
+
+        {activeTab === "candidates" && (
+          <div className="mt-6">
+            <GymCandidatesTab
+              candidates={data.candidates}
+              onRefresh={data.loadData}
+              showFeedback={showFeedback}
+              isSuperAdmin={isSuperAdmin}
             />
           </div>
         )}

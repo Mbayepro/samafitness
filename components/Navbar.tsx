@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import { useSiteData } from "@/lib/site-context";
 
@@ -20,11 +21,16 @@ export default function Navbar() {
   return (
     <header className="fixed left-0 right-0 top-0 z-50">
       {/* Fitness Park style Top Announcement Bar */}
-      <div className="border-b border-lime-400/20 bg-lime-400/10 px-4 py-1.5 text-center text-[11px] font-bold uppercase tracking-wider text-lime-400 backdrop-blur-md sm:text-xs">
-        <div className="mx-auto flex max-w-7xl items-center justify-center gap-2">
-          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-lime-400" />
-          <span>Rejoignez SAMBAFITNESS • {SITE_DATA.contact.address}, {SITE_DATA.contact.city}</span>
-          <a href={`tel:${SITE_DATA.contact.phoneTel}`} className="hidden hover:underline md:inline">• {SITE_DATA.contact.phone}</a>
+      <div className="border-b border-amber-400/30 bg-gradient-to-r from-amber-950/70 via-black to-lime-950/50 px-4 py-1.5 text-center text-[11px] font-bold uppercase tracking-wider text-amber-300 backdrop-blur-md sm:text-xs">
+        <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 flex-wrap">
+          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400" />
+          <span>SAMBA FITNESS RECRUTE (1-20 Nov. 2026) : Coach, Gestionnaire, Secrétaire & Ménage</span>
+          <Link
+            href="/recrutement"
+            className="rounded-full bg-lime-400/15 border border-lime-400/40 px-2 py-0.5 text-[10px] font-black uppercase text-lime-300 hover:bg-lime-400 hover:text-black transition ml-1"
+          >
+            Postuler en ligne ↗
+          </Link>
         </div>
       </div>
 
@@ -79,6 +85,16 @@ export default function Navbar() {
                 <span className="absolute -bottom-1 left-0 h-0.5 w-0 bg-amber-400 transition-all duration-300 group-hover:w-full" />
               </a>
             )}
+            <Link
+              href="/recrutement"
+              className="group relative inline-flex items-center gap-1.5 text-sm font-semibold tracking-wide text-lime-400 transition-colors duration-200 hover:text-lime-300"
+            >
+              <span>Recrutement</span>
+              <span className="rounded-full border border-lime-400/40 bg-lime-400/20 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-lime-300">
+                4 Postes
+              </span>
+              <span className="absolute -bottom-1 left-0 h-0.5 w-0 bg-lime-400 transition-all duration-300 group-hover:w-full" />
+            </Link>
           </nav>
 
           {/* Action Button & Mobile Burger */}
@@ -166,6 +182,16 @@ export default function Navbar() {
                     </span>
                   </motion.a>
                 )}
+                <Link
+                  href="/recrutement"
+                  onClick={closeMenu}
+                  className="flex items-center justify-between rounded-xl px-4 py-2.5 text-base font-bold text-lime-400 transition-colors hover:bg-white/5"
+                >
+                  <span>Appel à candidatures</span>
+                  <span className="rounded-full border border-lime-400/40 bg-lime-400/20 px-2 py-0.5 text-[10px] font-black uppercase text-lime-300">
+                    4 Postes
+                  </span>
+                </Link>
 
                 <div className="my-2 border-t border-white/10 pt-2">
                   <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-widest text-white/40">

@@ -159,6 +159,69 @@ create policy "Super admin peut supprimer les demandes"
 
 
 -- ==============================================================================
+-- 3.1 TABLE DES CANDIDATURES DE RECRUTEMENT (JOB_APPLICATIONS)
+-- ==============================================================================
+create table if not exists public.job_applications (
+    id text primary key,
+    full_name text not null,
+    phone text not null,
+    whatsapp text,
+    email text,
+    position text not null check (position in ('coach', 'gestionnaire', 'secretaire', 'menage')),
+    position_label text not null,
+    city text not null,
+    experience text not null,
+    availability text not null,
+    message text,
+    cv_url text,
+    cv_filename text,
+    status text not null default 'nouveau' check (status in ('nouveau', 'contacte', 'entretien', 'retenu', 'refuse')),
+    notes text,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz
+);
+
+create index if not exists idx_job_applications_created_at on public.job_applications (created_at desc);
+create index if not exists idx_job_applications_position on public.job_applications (position);
+create index if not exists idx_job_applications_status on public.job_applications (status);
+
+alter table public.job_applications enable row level security;
+
+drop policy if exists "Visiteurs peuvent soumettre une candidature" on public.job_applications;
+create policy "Visiteurs peuvent soumettre une candidature"
+    on public.job_applications
+    for insert
+    to anon, authenticated
+    with check (
+        length(trim(full_name)) >= 2
+        and length(trim(phone)) >= 6
+        and status = 'nouveau'
+    );
+
+drop policy if exists "Admins peuvent lire les candidatures" on public.job_applications;
+create policy "Admins peuvent lire les candidatures"
+    on public.job_applications
+    for select
+    to authenticated
+    using (private.is_admin());
+
+drop policy if exists "Admins peuvent modifier les candidatures" on public.job_applications;
+create policy "Admins peuvent modifier les candidatures"
+    on public.job_applications
+    for update
+    to authenticated
+    using (private.is_admin())
+    with check (private.is_admin());
+
+drop policy if exists "Super admin peut supprimer les candidatures" on public.job_applications;
+create policy "Super admin peut supprimer les candidatures"
+    on public.job_applications
+    for delete
+    to authenticated
+    using (private.is_super_admin());
+
+
+-- ==============================================================================
 -- 4. TABLE DES PARAMÈTRES ET DU CONTENU DU SITE (SITE_SETTINGS)
 -- ==============================================================================
 create table if not exists public.site_settings (
