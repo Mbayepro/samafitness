@@ -31,18 +31,71 @@ const candidatesFileStore = createJsonFileStore<Candidate[]>({
   empty: [],
 });
 
+const CANDIDATE_LEAD_PREFIX = "CANDIDATURE::";
+
+function parseCandidateFromLead(row: {
+  id: string;
+  name: string;
+  phone: string;
+  club: string;
+  message?: string | null;
+  created_at: string;
+}): Candidate | null {
+  if (!row.club?.startsWith(CANDIDATE_LEAD_PREFIX)) return null;
+  if (row.message) {
+    try {
+      const parsed = JSON.parse(row.message) as Candidate;
+      if (parsed && parsed.full_name && parsed.position) {
+        return {
+          ...parsed,
+          id: row.id,
+          created_at: parsed.created_at || row.created_at,
+        };
+      }
+    } catch {
+      // Ignorer si ce n'est pas du JSON valide
+    }
+  }
+  const pos = (row.club.replace(CANDIDATE_LEAD_PREFIX, "") || "coach") as JobPosition;
+  return {
+    id: row.id,
+    full_name: row.name,
+    phone: row.phone,
+    position: pos,
+    position_label: JOB_POSITION_LABELS[pos] || pos,
+    city: "Ndioum",
+    experience: "Non précisé",
+    availability: "Immédiate",
+    message: row.message || null,
+    status: "nouveau",
+    created_at: row.created_at,
+  };
+}
+
 export async function getCandidates(): Promise<Candidate[]> {
   const localCandidates = candidatesFileStore.read();
 
   const remoteCandidates = await runSupabase("getCandidates", async () => {
     const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("job_applications")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const [{ data: jobApps, error: jobErr }, { data: leadRows }] = await Promise.all([
+      supabase.from("job_applications").select("*").order("created_at", { ascending: false }),
+      supabase
+        .from("leads")
+        .select("*")
+        .like("club", `${CANDIDATE_LEAD_PREFIX}%`)
+        .order("created_at", { ascending: false }),
+    ]);
 
-    if (error || !data || !Array.isArray(data)) return null;
-    return data as Candidate[];
+    const fromJobTable: Candidate[] =
+      !jobErr && Array.isArray(jobApps) ? (jobApps as Candidate[]) : [];
+    const fromLeadsFallback: Candidate[] = Array.isArray(leadRows)
+      ? leadRows
+          .map(parseCandidateFromLead)
+          .filter((c): c is Candidate => c !== null)
+      : [];
+
+    if (jobErr && !Array.isArray(leadRows)) return null;
+    return mergeById(fromJobTable, fromLeadsFallback);
   });
 
   const all = remoteCandidates ? mergeById(remoteCandidates, localCandidates) : localCandidates;
@@ -83,10 +136,27 @@ export async function saveCandidate(
   list.unshift(newCandidate);
   candidatesFileStore.write(list);
 
-  // 2. Sauvegarde Supabase si configuré
+  // 2. Sauvegarde Supabase si configuré (avec repli automatique sur public.leads si job_applications n'est pas encore créée)
   await runSupabase("saveCandidate", async () => {
     const supabase = await createClient();
-    await supabase.from("job_applications").insert([newCandidate]);
+    const { error } = await supabase.from("job_applications").insert([newCandidate]);
+    if (error) {
+      logger.warn(
+        { error },
+        "Table job_applications indisponible, repli automatique sur public.leads"
+      );
+      await supabase.from("leads").insert([
+        {
+          id: newCandidate.id,
+          name: newCandidate.full_name,
+          phone: newCandidate.phone,
+          club: `${CANDIDATE_LEAD_PREFIX}${newCandidate.position}`,
+          message: JSON.stringify(newCandidate),
+          status: "nouveau",
+          created_at: newCandidate.created_at,
+        },
+      ]);
+    }
     return true;
   });
 
@@ -101,20 +171,40 @@ export async function updateCandidateStatus(
   id: string,
   status: CandidateStatus
 ): Promise<boolean> {
+  const now = new Date().toISOString();
   const list = candidatesFileStore.read();
   const index = list.findIndex((c) => c.id === id);
   if (index !== -1) {
     list[index].status = status;
-    list[index].updated_at = new Date().toISOString();
+    list[index].updated_at = now;
     candidatesFileStore.write(list);
   }
 
   await runSupabase("updateCandidateStatus", async () => {
     const supabase = await createClient();
-    await supabase
+    const { error } = await supabase
       .from("job_applications")
-      .update({ status, updated_at: new Date().toISOString() })
+      .update({ status, updated_at: now })
       .eq("id", id);
+
+    if (error) {
+      const { data: leadRow } = await supabase
+        .from("leads")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+      if (leadRow) {
+        const parsed = parseCandidateFromLead(leadRow);
+        if (parsed) {
+          parsed.status = status;
+          parsed.updated_at = now;
+          await supabase
+            .from("leads")
+            .update({ message: JSON.stringify(parsed) })
+            .eq("id", id);
+        }
+      }
+    }
     return true;
   });
 
@@ -125,20 +215,40 @@ export async function updateCandidateNotes(
   id: string,
   notes: string
 ): Promise<boolean> {
+  const now = new Date().toISOString();
   const list = candidatesFileStore.read();
   const index = list.findIndex((c) => c.id === id);
   if (index !== -1) {
     list[index].notes = notes;
-    list[index].updated_at = new Date().toISOString();
+    list[index].updated_at = now;
     candidatesFileStore.write(list);
   }
 
   await runSupabase("updateCandidateNotes", async () => {
     const supabase = await createClient();
-    await supabase
+    const { error } = await supabase
       .from("job_applications")
-      .update({ notes, updated_at: new Date().toISOString() })
+      .update({ notes, updated_at: now })
       .eq("id", id);
+
+    if (error) {
+      const { data: leadRow } = await supabase
+        .from("leads")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+      if (leadRow) {
+        const parsed = parseCandidateFromLead(leadRow);
+        if (parsed) {
+          parsed.notes = notes;
+          parsed.updated_at = now;
+          await supabase
+            .from("leads")
+            .update({ message: JSON.stringify(parsed) })
+            .eq("id", id);
+        }
+      }
+    }
     return true;
   });
 
@@ -152,7 +262,10 @@ export async function deleteCandidate(id: string): Promise<boolean> {
 
   await runSupabase("deleteCandidate", async () => {
     const supabase = await createClient();
-    await supabase.from("job_applications").delete().eq("id", id);
+    await Promise.all([
+      supabase.from("job_applications").delete().eq("id", id),
+      supabase.from("leads").delete().eq("id", id),
+    ]);
     return true;
   });
 

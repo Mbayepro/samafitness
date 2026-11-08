@@ -32,7 +32,9 @@ export async function getLeads(): Promise<Lead[]> {
     return data as Lead[];
   });
 
-  const allLeads = remoteLeads ? mergeById(remoteLeads, localLeads) : localLeads;
+  const allLeads = (remoteLeads ? mergeById(remoteLeads, localLeads) : localLeads).filter(
+    (l) => !l.club?.startsWith("CANDIDATURE::")
+  );
 
   // Tri par date décroissante
   return allLeads.sort(

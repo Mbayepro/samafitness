@@ -567,8 +567,8 @@ export async function getMemberByQrToken(qrToken: string): Promise<Member | null
     }
   }
 
-  const local = readLocalGymData();
-  const found = local.members.find((m) => {
+  const allMembers = await getMembers();
+  const found = allMembers.find((m) => {
     if (m.qr_token === clean || m.id === clean) return true;
     if (memberNumLookup && formatMemberNumber(m.member_number, m.id).toUpperCase() === clean.toUpperCase()) {
       return true;
@@ -594,9 +594,13 @@ export async function deleteMember(id: string): Promise<boolean> {
   if (isSupabaseConfigured()) {
     try {
       const supabase = await createClient();
-      await supabase.from("members").delete().eq("id", id);
+      const { error } = await supabase.from("members").delete().eq("id", id);
+      if (error && !gymFile.useLocalFile) {
+        throw new Error(`Impossible de supprimer le membre : ${error.message}`);
+      }
     } catch (err) {
       logger.warn({ err }, "Erreur delete member Supabase");
+      if (!gymFile.useLocalFile && err instanceof Error) throw err;
     }
   }
 
@@ -669,55 +673,64 @@ export async function recordPayment(
   let updatedMember: Member | null = null;
   const currentMember = members.find((m) => m.id === data.member_id);
 
-  if (currentMember) {
-    // Si la période payée va plus loin que l'end_date actuelle, on prolonge
-    const newEndDate =
-      data.period_end > currentMember.end_date ? data.period_end : currentMember.end_date;
-    const newStatus = computeMemberStatus(newEndDate);
+  if (!currentMember) {
+    throw new Error("Membre introuvable pour enregistrer ce paiement.");
+  }
 
-    updatedMember = {
-      ...currentMember,
-      end_date: newEndDate,
-      status: newStatus,
-      updated_at: now,
-    };
+  // Si la période payée va plus loin que l'end_date actuelle, on prolonge
+  const newEndDate =
+    data.period_end > currentMember.end_date ? data.period_end : currentMember.end_date;
+  const newStatus = computeMemberStatus(newEndDate);
 
-    payment.member_name = currentMember.full_name;
-    payment.member_phone = currentMember.phone;
+  updatedMember = {
+    ...currentMember,
+    end_date: newEndDate,
+    status: newStatus,
+    updated_at: now,
+  };
 
-    // Sauvegarde membre local
-    const local = readLocalGymData();
-    const idx = local.members.findIndex((m) => m.id === currentMember.id);
-    if (idx !== -1) {
-      local.members[idx] = updatedMember;
-    }
-    local.payments.unshift(payment);
-    writeLocalGymData(local);
+  payment.member_name = currentMember.full_name;
+  payment.member_phone = currentMember.phone;
 
-    if (isSupabaseConfigured()) {
-      try {
-        const supabase = await createClient();
-        await Promise.all([
-          supabase.from("payments").insert([{
-            id: payment.id,
-            member_id: payment.member_id,
-            amount_fcfa: payment.amount_fcfa,
-            method: payment.method,
-            period_start: payment.period_start,
-            period_end: payment.period_end,
-            note: payment.note,
-            recorded_by: payment.recorded_by,
-            created_at: payment.created_at,
-          }]),
-          supabase.from("members").update({
-            end_date: newEndDate,
-            status: newStatus,
-            updated_at: now,
-          }).eq("id", currentMember.id),
-        ]);
-      } catch (err) {
-        logger.warn({ err }, "Erreur recordPayment Supabase");
+  // Sauvegarde membre local
+  const local = readLocalGymData();
+  const idx = local.members.findIndex((m) => m.id === currentMember.id);
+  if (idx !== -1) {
+    local.members[idx] = updatedMember;
+  }
+  local.payments.unshift(payment);
+  writeLocalGymData(local);
+
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = await createClient();
+      const [payRes, memRes] = await Promise.all([
+        supabase.from("payments").insert([{
+          id: payment.id,
+          member_id: payment.member_id,
+          amount_fcfa: payment.amount_fcfa,
+          method: payment.method,
+          period_start: payment.period_start,
+          period_end: payment.period_end,
+          note: payment.note,
+          recorded_by: payment.recorded_by,
+          created_at: payment.created_at,
+        }]),
+        supabase.from("members").update({
+          end_date: newEndDate,
+          status: newStatus,
+          updated_at: now,
+        }).eq("id", currentMember.id),
+      ]);
+      if (payRes.error && !gymFile.useLocalFile) {
+        throw new Error(`Impossible d'enregistrer le paiement : ${payRes.error.message}`);
       }
+      if (memRes.error) {
+        logger.warn({ error: memRes.error }, "Avertissement mise à jour date fin membre");
+      }
+    } catch (err) {
+      logger.warn({ err }, "Erreur recordPayment Supabase");
+      if (!gymFile.useLocalFile && err instanceof Error) throw err;
     }
   }
 
