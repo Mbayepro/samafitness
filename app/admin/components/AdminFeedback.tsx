@@ -12,7 +12,7 @@ export default function AdminFeedbackToast({ feedback }: { feedback: AdminFeedba
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-[8px] border border-[#23272d] bg-[#111315] px-4 py-3 text-xs font-medium text-[#f0f2f5] shadow-lg animate-fade-in"
+      className="fixed bottom-6 right-6 z-[100] flex items-center gap-2.5 rounded-[8px] border border-[#23272d] bg-[#111315] px-4 py-3 text-xs font-medium text-[#f0f2f5] shadow-lg animate-fade-in"
     >
       <span
         className={`flex h-5 w-5 items-center justify-center rounded-[4px] ${

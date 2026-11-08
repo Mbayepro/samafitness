@@ -53,4 +53,39 @@ describe("GymMembersTab", () => {
     expect(screen.getByText("Mamadou Sy")).toBeInTheDocument();
     expect(screen.queryByText("Awa Ndiaye")).not.toBeInTheDocument();
   });
+
+  it("soumet le formulaire d'inscription sans notes (notes: null) et valide avec memberSchema", async () => {
+    const { memberSchema } = await import("@/lib/validations/gym");
+    const onSaveMember = vi.fn(async (payload) => {
+      const parsed = memberSchema.safeParse(payload);
+      expect(parsed.success).toBe(true);
+      return parsed.success;
+    });
+    const showFeedback = vi.fn();
+
+    render(
+      <GymMembersTab
+        {...defaultProps}
+        defaultOpenCreate={true}
+        onSaveMember={onSaveMember}
+        showFeedback={showFeedback}
+      />
+    );
+
+    const nameInput = screen.getByPlaceholderText(/Moussa Diop/i);
+    const phoneInput = screen.getByPlaceholderText(/\+221 77 123 45 67/i);
+    fireEvent.change(nameInput, { target: { value: "Ibrahima Fall" } });
+    fireEvent.change(phoneInput, { target: { value: "+221 77 555 44 33" } });
+
+    const submitBtn = screen.getByRole("button", { name: /^Inscrire$/i });
+    fireEvent.click(submitBtn);
+
+    await vi.waitFor(() => {
+      expect(onSaveMember).toHaveBeenCalledTimes(1);
+      expect(showFeedback).toHaveBeenCalledWith(
+        "success",
+        "Nouveau membre inscrit avec succès !"
+      );
+    });
+  });
 });

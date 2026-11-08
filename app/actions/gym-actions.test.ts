@@ -96,7 +96,7 @@ describe("gym-actions", () => {
     }
   });
 
-  it("inscrit un nouveau membre et le retrouve immédiatement dans la liste", async () => {
+  it("inscrit un nouveau membre (même avec notes: null) et le retrouve immédiatement dans la liste", async () => {
     vi.spyOn(adminAuth, "requireAdmin").mockResolvedValue({
       email: "admin@sambafitness.sn",
       role: "super_admin",
@@ -105,12 +105,14 @@ describe("gym-actions", () => {
 
     const { deleteMemberAction } = await import("./gym-actions");
     const saveRes = await saveMemberAction({
+      id: undefined,
       full_name: "Moussa Ndiaye Test",
       phone: "+221 77 888 99 00",
       plan_id: "mensuel",
       start_date: "2026-11-01",
       end_date: "2026-12-01",
-      notes: "Test inscription admin",
+      notes: null,
+      qr_token: undefined,
     });
 
     expect(saveRes.success).toBe(true);

@@ -37,8 +37,8 @@ export type TrialFormInput = z.infer<typeof trialFormSchema>;
  * Member Create / Update Schema
  */
 export const memberSchema = z.object({
-  id: z.string().optional(),
-  member_number: z.number().int().positive().optional(),
+  id: z.string().nullable().optional(),
+  member_number: z.number().int().positive().nullable().optional(),
   full_name: z
     .string()
     .trim()
@@ -53,6 +53,7 @@ export const memberSchema = z.object({
     .string()
     .trim()
     .email("Adresse email invalide.")
+    .nullable()
     .optional()
     .or(z.literal("")),
   plan_id: z
@@ -65,9 +66,9 @@ export const memberSchema = z.object({
   end_date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Format de date fin invalide (AAAA-MM-JJ)."),
-  notes: z.string().max(500, "Note trop longue.").optional().or(z.literal("")),
-  qr_code: z.string().optional(),
-  qr_token: z.string().optional(),
+  notes: z.string().max(500, "Note trop longue.").nullable().optional().or(z.literal("")),
+  qr_code: z.string().nullable().optional(),
+  qr_token: z.string().nullable().optional(),
 });
 
 export type MemberInput = z.infer<typeof memberSchema>;
@@ -90,7 +91,7 @@ export const paymentSchema = z.object({
   period_end: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Format de date fin invalide (AAAA-MM-JJ)."),
-  note: z.string().max(250, "Note trop longue.").optional().or(z.literal("")),
+  note: z.string().max(250, "Note trop longue.").nullable().optional().or(z.literal("")),
 });
 
 export type PaymentInput = z.infer<typeof paymentSchema>;
@@ -132,7 +133,7 @@ export const expenseSchema = z.object({
     .positive("Le montant doit être supérieur à 0 FCFA.")
     .max(50000000, "Montant excessif."),
   category: z.enum(EXPENSE_CATEGORIES),
-  description: z.string().trim().max(500, "Description trop longue.").optional().or(z.literal("")),
+  description: z.string().trim().max(500, "Description trop longue.").nullable().optional().or(z.literal("")),
   paid_at: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Format de date invalide (AAAA-MM-JJ)."),
