@@ -26,7 +26,7 @@ interface GymPaymentsTabProps {
     period_start: string;
     period_end: string;
     note?: string;
-  }) => Promise<void>;
+  }) => Promise<boolean | void>;
   onRecordExpense?: (data: {
     amount_fcfa: number;
     category: ExpenseCategory;
@@ -190,7 +190,7 @@ export default function GymPaymentsTab({
 
     setSubmittingPayment(true);
     try {
-      await onRecordPayment({
+      const ok = await onRecordPayment({
         member_id: memberId,
         amount_fcfa: Number(amountFcfa),
         method,
@@ -198,6 +198,7 @@ export default function GymPaymentsTab({
         period_end: periodEnd,
         note: note.trim() || undefined,
       });
+      if (ok === false) return;
       setIsPaymentModalOpen(false);
       showFeedback("success", "Paiement enregistré et abonnement prolongé !");
     } catch {

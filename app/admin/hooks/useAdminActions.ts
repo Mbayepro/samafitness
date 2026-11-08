@@ -26,6 +26,7 @@ interface UseAdminActionsParams {
   content: SiteContentType | null;
   setContent: Dispatch<SetStateAction<SiteContentType | null>>;
   setLeads: Dispatch<SetStateAction<Lead[]>>;
+  setMembers?: Dispatch<SetStateAction<Member[]>>;
   convertingLead: Lead | null;
   setConvertingLead: Dispatch<SetStateAction<Lead | null>>;
   loadData: () => Promise<void>;
@@ -36,6 +37,7 @@ export function useAdminActions({
   content,
   setContent,
   setLeads,
+  setMembers,
   convertingLead,
   setConvertingLead,
   loadData,
@@ -113,13 +115,22 @@ export function useAdminActions({
 
   const handleSaveMember = async (
     data: Omit<Member, "id" | "status" | "created_at" | "updated_at"> & { id?: string }
-  ) => {
+  ): Promise<boolean> => {
     const res = await saveMemberAction(data);
     if (!res.success) {
       showFeedback("error", res.error);
-      return;
+      return false;
+    }
+    if (setMembers && res.member) {
+      setMembers((prev) => {
+        const exists = prev.some((m) => m.id === res.member.id);
+        return exists
+          ? prev.map((m) => (m.id === res.member.id ? res.member : m))
+          : [res.member, ...prev];
+      });
     }
     await loadData();
+    return true;
   };
 
   const handleDeleteMember = async (id: string, name: string) => {
@@ -127,6 +138,9 @@ export function useAdminActions({
     if (!res.success) {
       showFeedback("error", res.error);
       return;
+    }
+    if (setMembers) {
+      setMembers((prev) => prev.filter((m) => m.id !== id));
     }
     showFeedback("success", `Membre ${name} supprimé.`);
     await loadData();
@@ -154,13 +168,14 @@ export function useAdminActions({
     period_start: string;
     period_end: string;
     note?: string;
-  }) => {
+  }): Promise<boolean> => {
     const res = await recordPaymentAction(data);
     if (!res.success) {
       showFeedback("error", res.error);
-      return;
+      return false;
     }
     await loadData();
+    return true;
   };
 
   const handleConfirmConvertLead = async (data: {
@@ -170,15 +185,23 @@ export function useAdminActions({
     duration_months: number;
     amount_fcfa?: number;
     payment_method?: PaymentMethod;
-  }) => {
-    if (!convertingLead) return;
+  }): Promise<boolean> => {
+    if (!convertingLead) return false;
     const res = await convertLeadToMemberAction(convertingLead.id, data);
     if (!res.success) {
       showFeedback("error", res.error);
-      return;
+      return false;
     }
+    if (setMembers && res.member) {
+      setMembers((prev) => [res.member, ...prev.filter((m) => m.id !== res.member.id)]);
+    }
+    setLeads((prev) =>
+      prev.map((l) => (l.id === convertingLead.id ? { ...l, status: "inscrit" } : l))
+    );
     setConvertingLead(null);
+    showFeedback("success", `${res.member.full_name} a été inscrit(e) dans la liste des membres !`);
     await loadData();
+    return true;
   };
 
   const handleSaveClubInfo = (e: FormEvent<HTMLFormElement>) => {

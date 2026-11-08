@@ -18,7 +18,7 @@ interface GymMembersTabProps {
   isSuperAdmin: boolean;
   onSaveMember: (
     data: Omit<Member, "id" | "status" | "created_at" | "updated_at"> & { id?: string }
-  ) => Promise<void>;
+  ) => Promise<boolean | void>;
   onDeleteMember: (id: string, name: string) => Promise<void>;
   onQuickCheckIn: (memberId: string) => Promise<boolean | void>;
   onOpenPaymentForMember: (member: Member) => void;
@@ -56,7 +56,7 @@ export default function GymMembersTab({
   onDeleteLead = () => {},
   onStartConvertLead = () => {},
 }: GymMembersTabProps) {
-  const [subTab] = useState<"list" | "relances" | "leads">(initialSubTab);
+  const [subTab, setSubTab] = useState<"list" | "relances" | "leads">(initialSubTab);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -122,7 +122,7 @@ export default function GymMembersTab({
 
     setSaving(true);
     try {
-      await onSaveMember({
+      const ok = await onSaveMember({
         id: editingMember?.id,
         full_name: fullName.trim(),
         phone: phone.trim(),
@@ -132,6 +132,12 @@ export default function GymMembersTab({
         notes: notes.trim() || null,
         qr_token: editingMember?.qr_token,
       });
+      if (ok === false) return;
+      if (!editingMember) {
+        setStatusFilter("all");
+        setSearch("");
+        setSubTab("list");
+      }
       setIsModalOpen(false);
       showFeedback("success", editingMember ? "Fiche membre modifiée." : "Nouveau membre inscrit avec succès !");
     } catch {

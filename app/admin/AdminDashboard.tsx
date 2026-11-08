@@ -47,6 +47,7 @@ export default function AdminDashboard({ admin }: { admin: AdminContext }) {
     content: data.content,
     setContent: data.setContent,
     setLeads: data.setLeads,
+    setMembers: data.setMembers,
     convertingLead,
     setConvertingLead,
     loadData: data.loadData,

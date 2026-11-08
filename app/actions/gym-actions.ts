@@ -64,7 +64,11 @@ async function guarded<T extends object>(
       };
     }
     logger.error({ err }, "Erreur action gym");
-    return { success: false, error: "Une erreur est survenue. Réessayez." };
+    const message =
+      err instanceof Error && err.message
+        ? err.message
+        : "Une erreur est survenue. Réessayez.";
+    return { success: false, error: message };
   }
 }
 

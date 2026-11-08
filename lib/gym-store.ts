@@ -363,10 +363,14 @@ export async function getMembers(): Promise<Member[]> {
   });
 
   if (remote) {
-    return mergeById(remote.map(withStatus), localData.members.map(withStatus));
+    return mergeById(remote.map(withStatus), localData.members.map(withStatus)).sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
   }
 
-  return localData.members.map(withStatus);
+  return localData.members
+    .map(withStatus)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
 export async function saveMember(
@@ -375,14 +379,22 @@ export async function saveMember(
   const now = new Date().toISOString();
   const status = computeMemberStatus(data.end_date);
   const local = readLocalGymData();
+  const allMembers = await getMembers();
 
   const existingIdx = data.id ? local.members.findIndex((m) => m.id === data.id) : -1;
-  const existing = existingIdx !== -1 ? local.members[existingIdx] : null;
+  const existing = data.id
+    ? allMembers.find((m) => m.id === data.id) ??
+      (existingIdx !== -1 ? local.members[existingIdx] : null)
+    : null;
 
-  // Numéro de membre stable (jamais recalculé)
+  // Numéro de membre stable (jamais recalculé, basé sur l'ensemble des membres distants + locaux)
   let memberNumber = existing?.member_number ?? data.member_number;
   if (!memberNumber) {
-    const maxNum = local.members.reduce((acc, m) => Math.max(acc, m.member_number || 0), 0);
+    const maxNum = allMembers.reduce((acc, m, idx) => {
+      const demoMatch = m.id.match(/^mem_demo_(\d+)$/);
+      const fallbackNum = demoMatch ? parseInt(demoMatch[1], 10) : idx + 1;
+      return Math.max(acc, m.member_number || fallbackNum);
+    }, 0);
     memberNumber = maxNum + 1;
   }
 
@@ -392,7 +404,7 @@ export async function saveMember(
     qrToken = generateSecureQrToken();
   }
 
-  const member: Member = {
+  let member: Member = {
     id: data.id || `mem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     member_number: memberNumber,
     full_name: data.full_name,
@@ -417,9 +429,73 @@ export async function saveMember(
   if (isSupabaseConfigured()) {
     try {
       const supabase = await createClient();
-      await supabase.from("members").upsert(member);
+      const { member_number: _omitNum, ...withoutMemberNumber } = member;
+
+      // Pour une nouvelle inscription, on laisse d'abord la séquence Postgres attribuer member_number
+      // (évite les collisions UNIQUE sur member_number et reste compatible si la colonne n'existe pas)
+      const initialPayload = existing ? member : withoutMemberNumber;
+      let { data: savedRow, error } = await supabase
+        .from("members")
+        .upsert(initialPayload)
+        .select("*")
+        .maybeSingle();
+
+      // Repli 1 : conflit de séquence ou contrainte sur member_number -> on tente avec notre memberNumber calculé
+      if (error && !existing) {
+        const retryWithNum = await supabase
+          .from("members")
+          .upsert(member)
+          .select("*")
+          .maybeSingle();
+        savedRow = retryWithNum.data;
+        error = retryWithNum.error;
+      }
+
+      // Repli 2 : si la colonne member_number n'existe pas ou cause un conflit lors d'une édition
+      if (error && existing) {
+        const retryWithoutNum = await supabase
+          .from("members")
+          .upsert(withoutMemberNumber)
+          .select("*")
+          .maybeSingle();
+        savedRow = retryWithoutNum.data;
+        error = retryWithoutNum.error;
+      }
+
+      // Repli 3 : compatibilité si la table distante n'a pas encore la colonne qr_token
+      if (error && error.message?.includes("qr_token")) {
+        const { qr_token: _omitQr, ...minimalPayload } = withoutMemberNumber;
+        const retryMinimal = await supabase
+          .from("members")
+          .upsert(minimalPayload)
+          .select("*")
+          .maybeSingle();
+        savedRow = retryMinimal.data;
+        error = retryMinimal.error;
+      }
+
+      if (error) {
+        logger.error({ error }, "Erreur upsert member Supabase");
+        if (!gymFile.useLocalFile) {
+          throw new Error(`Impossible d'enregistrer le membre : ${error.message}`);
+        }
+      } else if (savedRow) {
+        member = {
+          ...member,
+          ...(savedRow as Member),
+          status: computeMemberStatus((savedRow as Member).end_date || member.end_date),
+        };
+        const updatedLocalIdx = local.members.findIndex((m) => m.id === member.id);
+        if (updatedLocalIdx !== -1) {
+          local.members[updatedLocalIdx] = member;
+          writeLocalGymData(local);
+        }
+      }
     } catch (err) {
       logger.warn({ err }, "Erreur upsert member Supabase");
+      if (!gymFile.useLocalFile && err instanceof Error) {
+        throw err;
+      }
     }
   }
 

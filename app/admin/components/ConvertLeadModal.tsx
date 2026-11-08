@@ -15,7 +15,7 @@ interface ConvertLeadModalProps {
     duration_months: number;
     amount_fcfa?: number;
     payment_method?: PaymentMethod;
-  }) => Promise<void>;
+  }) => Promise<boolean | void>;
   showFeedback: (type: "success" | "error", text: string) => void;
 }
 
@@ -51,7 +51,7 @@ export default function ConvertLeadModal({
 
     setSubmitting(true);
     try {
-      await onConfirm({
+      const ok = await onConfirm({
         full_name: fullName.trim(),
         phone: phone.trim(),
         plan_id: planId,
@@ -59,6 +59,7 @@ export default function ConvertLeadModal({
         amount_fcfa: recordInitialPayment ? amountFcfa : undefined,
         payment_method: recordInitialPayment ? paymentMethod : undefined,
       });
+      if (ok === false) return;
       showFeedback("success", `Félicitations ! ${fullName} est maintenant inscrit(e) comme membre.`);
       onClose();
     } catch {

@@ -109,6 +109,7 @@ export function useAdminData(showFeedback: (type: FeedbackKind, text: string) =>
     setContent,
     supabaseConfigured,
     members,
+    setMembers,
     payments,
     attendances,
     expenses,

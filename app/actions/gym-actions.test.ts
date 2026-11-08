@@ -95,4 +95,38 @@ describe("gym-actions", () => {
       expect((res.member.qr_token?.length || 0)).toBeGreaterThanOrEqual(20);
     }
   });
+
+  it("inscrit un nouveau membre et le retrouve immédiatement dans la liste", async () => {
+    vi.spyOn(adminAuth, "requireAdmin").mockResolvedValue({
+      email: "admin@sambafitness.sn",
+      role: "super_admin",
+      isDemo: false,
+    });
+
+    const { deleteMemberAction } = await import("./gym-actions");
+    const saveRes = await saveMemberAction({
+      full_name: "Moussa Ndiaye Test",
+      phone: "+221 77 888 99 00",
+      plan_id: "mensuel",
+      start_date: "2026-11-01",
+      end_date: "2026-12-01",
+      notes: "Test inscription admin",
+    });
+
+    expect(saveRes.success).toBe(true);
+    if (saveRes.success) {
+      expect(saveRes.member.full_name).toBe("Moussa Ndiaye Test");
+      expect(saveRes.member.member_number).toBeGreaterThan(0);
+
+      const listRes = await fetchGymDataAction();
+      expect(listRes.success).toBe(true);
+      if (listRes.success) {
+        const found = listRes.members.find((m) => m.id === saveRes.member.id);
+        expect(found).toBeDefined();
+        expect(found?.full_name).toBe("Moussa Ndiaye Test");
+      }
+
+      await deleteMemberAction(saveRes.member.id);
+    }
+  });
 });
